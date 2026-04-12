@@ -18,3 +18,5 @@ dependencies:
     - dialz
     - python-dotenv
     - transformers
+    - bitsandbytes
+    - accelerate

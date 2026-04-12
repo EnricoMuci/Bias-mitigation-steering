@@ -30,8 +30,9 @@ if not model_short_name:
     raise ValueError(f"Unknown model name: {model_name}")
 
 # Load LLM
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(drive_path) # model_name
 tokenizer.pad_token_id = tokenizer.eos_token_id
+
 
 quantization_config = BitsAndBytesConfig(  # FIXME: new
     load_in_4bit=True,
@@ -39,7 +40,7 @@ quantization_config = BitsAndBytesConfig(  # FIXME: new
     llm_int8_enable_fp32_cpu_offload=True
 )
 model = AutoModelForCausalLM.from_pretrained(
-    model_name,
+    drive_path, # FIXME: model_name,
     device_map="auto",
     quantization_config=quantization_config
 )

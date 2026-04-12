@@ -5,3 +5,6 @@ pandas
 python-dotenv
 torch
 transformers
+
+bitsandbytes
+accelerate
