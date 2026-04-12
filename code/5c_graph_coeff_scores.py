@@ -61,7 +61,7 @@ def create_coeff_graph(axis, df, ax):
     ax.set_ylim(y_min, y_max)
 
 
-def create_single_axis_graph(axis):
+def create_single_axis_graph(axis): # single stereotype
     """Create a standalone graph for a single axis."""
     print(f"Creating standalone graph for {axis}...")
     

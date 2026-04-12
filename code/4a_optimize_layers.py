@@ -41,10 +41,10 @@ def batched_get_hiddens(
     model,
     tokenizer,
     inputs: list[str],
-    hidden_layers: list[int],
+    hidden_layers: list[int], # format: [1, ..., l, ..., L]
     batch_size: int,
     pooling: str = 'final'  # 'final' or 'mean'
-) -> dict[int, np.ndarray]:
+    ) -> dict[int, np.ndarray]:
     """
     Extract hidden states for each example and layer, with optional pooling.
 
@@ -60,7 +60,7 @@ def batched_get_hiddens(
         dict mapping layer -> array of shape (len(inputs), hidden_dim)
     """
     batched_inputs = [inputs[i:i + batch_size] for i in range(0, len(inputs), batch_size)]
-    hidden_states = {layer: [] for layer in hidden_layers}
+    hidden_states = {layer: [] for layer in hidden_layers} # dictionary  int: []
 
     with torch.no_grad():
         for batch in tqdm.tqdm(batched_inputs, desc="Getting hiddens"):

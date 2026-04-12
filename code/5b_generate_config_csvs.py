@@ -26,7 +26,7 @@ def generate_config_csvs():
             if os.path.exists(best_layers_file):
                 best_layers_df = pd.read_csv(best_layers_file)
                 # Find the row for this axis
-                axis_row = best_layers_df[best_layers_df['axis'] == axis]
+                axis_row = best_layers_df[best_layers_df['axis'] == axis] # best layer for that stereotype
                 if not axis_row.empty:
                     layer = axis_row.iloc[0]['max_layer']
                     vector_type = axis_row.iloc[0]['vt']

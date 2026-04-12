@@ -29,7 +29,7 @@ datasets = {
 
 def create_contrastive_entries(df):
     entries = []
-    letters = ['a', 'b', 'c']
+    letters = ['a', 'b', 'c'] # answer IDs
     for _, row in df.iterrows():
         # Extract text
         context = row['context'].strip()
@@ -38,9 +38,9 @@ def create_contrastive_entries(df):
         choices_str = f"(a) {choices[0]}  (b) {choices[1]}  (c) {choices[2]}"
 
         # Determine stereotype groups
-        stereo_groups = set(row['additional_metadata']['stereotyped_groups'])
-        stereo_groups.update({g.replace(" ", "") for g in stereo_groups})
-        ans_info = row['answer_info']
+        stereo_groups = set(row['additional_metadata']['stereotyped_groups']) # discriminated groups
+        stereo_groups.update({g.replace(" ", "") for g in stereo_groups}) 
+        ans_info = row['answer_info'] # another dictionary 
 
         # Find stereotype-matched answer
         stereo_idx = None
@@ -69,8 +69,8 @@ def create_contrastive_entries(df):
         anti_letter = letters[anti_idx]
 
         # Build entries: swapped so anti-stereotype is positive, stereotype is negative
-        positive = f"{context} {question} Choices: {choices_str} Answer: ({anti_letter}"
-        negative = f"{context} {question} Choices: {choices_str} Answer: ({stereo_letter}"
+        positive = f"{context} {question} Choices: {choices_str} Answer: ({anti_letter}" # anti-stereotypical
+        negative = f"{context} {question} Choices: {choices_str} Answer: ({stereo_letter}" # stereotypical 
 
         entries.append({"positive": positive, "negative": negative})
     return entries

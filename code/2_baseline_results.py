@@ -15,7 +15,8 @@ print(datetime.datetime.now())
 if len(sys.argv) > 1:
     model_name = sys.argv[1]
 else:
-    raise ValueError("Model name must be provided as a command-line argument.")
+    model_name = "mistralai/Mistral-7B-Instruct-v0.1" # FIXME: default model
+    # raise ValueError("Model name must be provided as a command-line argument.")
 
 # Map model names to short names
 model_short_names = {
@@ -31,10 +32,11 @@ if not model_short_name:
 # Load LLM
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 tokenizer.pad_token_id = tokenizer.eos_token_id
-model = AutoModelForCausalLM.from_pretrained(model_name)
-
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
-model = model.to(device)
+model = AutoModelForCausalLM.from_pretrained(
+    model_name,
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
 
 ## Get baseline first
 def process_row(row):
@@ -67,7 +69,7 @@ def process_row(row):
                 predicted_label = i
                 break
 
-    correct = (predicted_label == row["label"])
+    correct = (predicted_label == row["label"]) # i = 0, 1, or 2
 
     return pd.Series({
         "ans":         generated_answer,
@@ -75,6 +77,7 @@ def process_row(row):
         "correct":     correct
     })
 
+# Main exec
 
 all_dfs = []
 
@@ -92,4 +95,3 @@ big_df = pd.concat(all_dfs, ignore_index=True)
 output_dir = f'../results/{model_short_name}'
 os.makedirs(output_dir, exist_ok=True)
 big_df.to_csv(f'{output_dir}/bbq_baseline.csv', index=False)
-
