@@ -12,10 +12,11 @@ load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
 print(datetime.datetime.now())
 
+model_name = "mistralai/Mistral-7B-Instruct-v0.1"  # FIXME: move in else ↓
 if len(sys.argv) > 1:
-    model_name = sys.argv[1]
+    drive_path = sys.argv[1] #FIXME
 else:
-    model_name = "mistralai/Mistral-7B-Instruct-v0.1"  # FIXME: default model
+    drive_path = '' # FIXME
     # raise ValueError("Model name must be provided as a command-line argument.")
 
 # Map model names to short names
