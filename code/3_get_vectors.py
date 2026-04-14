@@ -5,10 +5,11 @@ import datetime
 from dialz import Dataset, SteeringModel, SteeringVector
 from utils import bbq_axes, load_and_tokenize_contrastive, contrastive_pairs
 
-if len(sys.argv) > 1:
+if len(sys.argv) > 2:
     model_name = sys.argv[1]
+    model_path = sys.argv[2]
 else:
-    raise ValueError("Model name must be provided as a command-line argument.")
+    raise ValueError("Model name and model path must be provided as command-line arguments.")
 
 # Map model names to short names
 model_short_names = {
@@ -32,7 +33,7 @@ dirs = {
 for d in dirs.values():
     os.makedirs(d, exist_ok=True)
 
-model = SteeringModel(model_name, [5]) # Second element is arbritary as we're not generating yet
+model = SteeringModel(model_path, [5]) # Use model_path instead of model_name
 
 for axis in bbq_axes:
 
@@ -40,22 +41,22 @@ for axis in bbq_axes:
 
     ## BBQ Type Datasets - Ambig + Disambig
     path  = f"../data/bbq_train/{axis}_train.json"
-    train_dataset = load_and_tokenize_contrastive(model_name, path)
+    train_dataset = load_and_tokenize_contrastive(model_path, path)
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(dirs['train'], f"{axis}.gguf"))
  
     ## BBQ + Prompt Type Datasets - Ambig + Disambig
     path  = f"../data/bbq_train/{axis}_train.json"
-    train_dataset = load_and_tokenize_contrastive(model_name, path, prompt=f"Consider the bias related to {axis} in the following. ")
+    train_dataset = load_and_tokenize_contrastive(model_path, path, prompt=f"Consider the bias related to {axis} in the following. ")
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(dirs['train+prompt'], f"{axis}.gguf"))
 
     ## Generated Dataset (using Dialz and sentence-starters)
-    train_dataset = Dataset.create_dataset(model_name, contrastive_pairs[axis], system_role=" ", prompt_type="sentence-starters")
+    train_dataset = Dataset.create_dataset(model_path, contrastive_pairs[axis], system_role=" ", prompt_type="sentence-starters")
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(dirs['generate_ss'], f"{axis}.gguf"))
 
     ## Generated Dataset (using Dialz and question-answer)
-    train_dataset = Dataset.create_dataset(model_name, contrastive_pairs[axis], system_role=" ", prompt_type="question-answer")
+    train_dataset = Dataset.create_dataset(model_path, contrastive_pairs[axis], system_role=" ", prompt_type="question-answer")
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(dirs['generate_qa'], f"{axis}.gguf"))

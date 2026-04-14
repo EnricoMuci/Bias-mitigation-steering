@@ -12,12 +12,12 @@ load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
 print(datetime.datetime.now())
 
-model_name = "mistralai/Mistral-7B-Instruct-v0.1"  # FIXME: move in else ↓
-if len(sys.argv) > 1:
-    drive_path = sys.argv[1] #FIXME
+
+if len(sys.argv) > 2:
+    model_name = sys.argv[1] #"mistralai/Mistral-7B-Instruct-v0.1" 
+    model_path = sys.argv[2] #FIXME
 else:
-    drive_path = '' # FIXME
-    # raise ValueError("Model name must be provided as a command-line argument.")
+    raise ValueError("Model name must be provided as a command-line argument.")
 
 # Map model names to short names
 model_short_names = {
@@ -31,7 +31,7 @@ if not model_short_name:
     raise ValueError(f"Unknown model name: {model_name}")
 
 # Load LLM
-tokenizer = AutoTokenizer.from_pretrained(drive_path) # model_name
+tokenizer = AutoTokenizer.from_pretrained(model_path) # model_name
 tokenizer.pad_token_id = tokenizer.eos_token_id
 
 
@@ -41,7 +41,7 @@ quantization_config = BitsAndBytesConfig(  # FIXME: new
     llm_int8_enable_fp32_cpu_offload=True
 )
 model = AutoModelForCausalLM.from_pretrained(
-    drive_path, # FIXME: model_name,
+    model_path, # FIXME: model_name,
     device_map="auto",
     quantization_config=quantization_config
 )
