@@ -8,6 +8,9 @@ from utils import bbq_axes, load_and_tokenize_contrastive, contrastive_pairs
 if len(sys.argv) > 2:
     model_name = sys.argv[1]
     model_path = sys.argv[2]
+elif len(sys.argv) > 1:
+    model_name = sys.argv[1]
+    model_path = model_name
 else:
     raise ValueError("Model name and model path must be provided as command-line arguments.")
 
@@ -51,12 +54,14 @@ for axis in bbq_axes:
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(dirs['train+prompt'], f"{axis}.gguf"))
 
-    ## Generated Dataset (using Dialz and sentence-starters)
-    train_dataset = Dataset.create_dataset(model_path, contrastive_pairs[axis], system_role=" ", prompt_type="sentence-starters")
-    vector = SteeringVector.train(model, train_dataset)
-    vector.export_gguf(os.path.join(dirs['generate_ss'], f"{axis}.gguf"))
+ 
+    if contrastive_pairs is not None: 
+        ## Generated Dataset (using Dialz and sentence-starters)
+        train_dataset = Dataset.create_dataset(model_path, contrastive_pairs[axis], system_role=" ", prompt_type="sentence-starters")
+        vector = SteeringVector.train(model, train_dataset)
+        vector.export_gguf(os.path.join(dirs['generate_ss'], f"{axis}.gguf"))
 
-    ## Generated Dataset (using Dialz and question-answer)
-    train_dataset = Dataset.create_dataset(model_path, contrastive_pairs[axis], system_role=" ", prompt_type="question-answer")
-    vector = SteeringVector.train(model, train_dataset)
-    vector.export_gguf(os.path.join(dirs['generate_qa'], f"{axis}.gguf"))
+        ## Generated Dataset (using Dialz and question-answer)
+        train_dataset = Dataset.create_dataset(model_path, contrastive_pairs[axis], system_role=" ", prompt_type="question-answer")
+        vector = SteeringVector.train(model, train_dataset)
+        vector.export_gguf(os.path.join(dirs['generate_qa'], f"{axis}.gguf"))

@@ -12,6 +12,8 @@ hf_token = os.getenv("HF_TOKEN")
 bbq_axes = ["age", "appearance", "disability", "gender", "nationality", "race", "religion", "socioeconomic"]
 
 
+
+
 def get_output(input_text, model, tokenizer, vector=None, coeff=0, max_new_tokens=20, repetition_penalty=1.1):
     messages = [
         {"role": "user", "content": input_text}
@@ -49,10 +51,10 @@ def get_output(input_text, model, tokenizer, vector=None, coeff=0, max_new_token
     return output_text
 
 
-def load_and_tokenize_contrastive(model_name: str, filepath: str, prompt: str = "") -> Dataset:
+def load_and_tokenize_contrastive(model_path: str, filepath: str, prompt: str = "") -> Dataset:
     ds_raw = Dataset.load_from_file(filepath)
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, token=hf_token)
+    tokenizer = AutoTokenizer.from_pretrained(model_path, token=hf_token)
     tokenizer.pad_token_id = tokenizer.eos_token_id
 
     ds_tok = Dataset()
@@ -73,6 +75,7 @@ def load_and_tokenize_contrastive(model_name: str, filepath: str, prompt: str = 
 
     return ds_tok
 
+contrastive_pairs = None
 
 def calculate_disambig_bias_score(df):
     """
