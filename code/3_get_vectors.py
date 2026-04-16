@@ -37,6 +37,8 @@ dirs = {
 for d in dirs.values():
     os.makedirs(d, exist_ok=True)
 
+
+
 model = SteeringModel(model_name, [5])  # Second element is arbritary as we're not generating yet
 
 for axis in bbq_axes:

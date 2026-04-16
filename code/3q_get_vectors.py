@@ -46,7 +46,17 @@ bnb_config = BitsAndBytesConfig(
 )
 
 print(f"--- Loading base model in 4-bit: {model_path} ---")
-model = SteeringModel(model_path, [5])  # Second element is arbritary as we're not generating yet
+
+base_model = AutoModelForCausalLM.from_pretrained(
+    model_path,
+    quantization_config=bnb_config,
+    device_map="auto",
+)
+try: 
+    model = SteeringModel(base_model, [5])
+except Exception as e:
+    print(f"Resetting Model configuration due to: \n{e} \n---")
+    model = SteeringModel(model_path, [5])  # Second element is arbritary as we're not generating yet
 
 for axis in bbq_axes:
     print(f"Creating 4 vectors for {axis} at:", datetime.datetime.now())
@@ -66,13 +76,13 @@ for axis in bbq_axes:
 
     ## Generated Dataset (using Dialz and sentence-starters)
     train_dataset = Dataset.create_dataset(
-        model_name, contrastive_pairs[axis], system_role=" ",
-                                           prompt_type="sentence-starters")
+        model_name, contrastive_pairs[axis], 
+        system_role=" ", prompt_type="sentence-starters")
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(dirs['generate_ss'], f"{axis}.gguf"))
 
     ## Generated Dataset (using Dialz and question-answer)
-    train_dataset = Dataset.create_dataset(model_name, contrastive_pairs[axis], system_role=" ",
-                                           prompt_type="question-answer")
+    train_dataset = Dataset.create_dataset(model_name, contrastive_pairs[axis], 
+                                           system_role=" ", prompt_type="question-answer")
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(dirs['generate_qa'], f"{axis}.gguf"))

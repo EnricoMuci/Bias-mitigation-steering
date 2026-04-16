@@ -12,8 +12,6 @@ hf_token = os.getenv("HF_TOKEN")
 bbq_axes = ["age", "appearance", "disability", "gender", "nationality", "race", "religion", "socioeconomic"]
 
 
-
-
 def get_output(input_text, model, tokenizer, vector=None, coeff=0, max_new_tokens=20, repetition_penalty=1.1):
     messages = [
         {"role": "user", "content": input_text}
