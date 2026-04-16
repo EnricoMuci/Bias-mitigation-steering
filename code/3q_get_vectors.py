@@ -37,23 +37,15 @@ dirs = {
 for d in dirs.values():
     os.makedirs(d, exist_ok=True)
 
-# Configurazione 4-bit
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_compute_dtype=torch.float16,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_use_double_quant=True,
-)
 
-print(f"--- Loading base model in 4-bit: {model_path} ---")
-
-base_model = AutoModelForCausalLM.from_pretrained(
-    model_path,
-    quantization_config=bnb_config,
-    device_map="auto",
-)
 try: 
-    model = SteeringModel(base_model, [5])
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.float16,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+    )
+    model = SteeringModel(model_path, [5], token=hf_token, quantization_config=bnb_config) # Solve by monkey-patching 
 except Exception as e:
     print(f"Resetting Model configuration due to: \n{e} \n---")
     model = SteeringModel(model_path, [5])  # Second element is arbritary as we're not generating yet
