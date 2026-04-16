@@ -41,7 +41,7 @@ quantization_config = BitsAndBytesConfig(  # FIXME: new
     llm_int8_enable_fp32_cpu_offload=True
 )
 model = AutoModelForCausalLM.from_pretrained(
-    model_path, # FIXME: model_name,
+    model_path,  # FIXME: model_name,
     device_map="auto",
     quantization_config=quantization_config
 )

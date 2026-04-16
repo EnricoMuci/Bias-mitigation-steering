@@ -4,8 +4,9 @@ import datetime
 import torch
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig
 from dialz import Dataset, SteeringModel, SteeringVector
-from utils import bbq_axes, load_and_tokenize_contrastive, contrastive_pairs
 
+from code.utils_new import QuantizedSteeringModel
+from utils import bbq_axes, load_and_tokenize_contrastive, contrastive_pairs
 
 if len(sys.argv) > 2:
     model_name = sys.argv[1]
@@ -37,18 +38,18 @@ dirs = {
 for d in dirs.values():
     os.makedirs(d, exist_ok=True)
 
-
-try: 
+try:
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_compute_dtype=torch.float16,
         bnb_4bit_quant_type="nf4",
         bnb_4bit_use_double_quant=True,
     )
-    model = SteeringModel(model_path, [5], token=hf_token, quantization_config=bnb_config) # Solve by monkey-patching 
+    model = QuantizedSteeringModel(model_path, [5], quantization_config=bnb_config)
+    print('SUCCESS!')
 except Exception as e:
-    print(f"Resetting Model configuration due to: \n{e} \n---")
-    model = SteeringModel(model_path, [5])  # Second element is arbritary as we're not generating yet
+    print(f"ERROR: {e}")
+    model = SteeringModel(model_path, [5]) # Second element is arbritary as we're not generating yet
 
 for axis in bbq_axes:
     print(f"Creating 4 vectors for {axis} at:", datetime.datetime.now())
@@ -68,13 +69,13 @@ for axis in bbq_axes:
 
     ## Generated Dataset (using Dialz and sentence-starters)
     train_dataset = Dataset.create_dataset(
-        model_name, contrastive_pairs[axis], 
+        model_name, contrastive_pairs[axis],
         system_role=" ", prompt_type="sentence-starters")
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(dirs['generate_ss'], f"{axis}.gguf"))
 
     ## Generated Dataset (using Dialz and question-answer)
-    train_dataset = Dataset.create_dataset(model_name, contrastive_pairs[axis], 
+    train_dataset = Dataset.create_dataset(model_name, contrastive_pairs[axis],
                                            system_role=" ", prompt_type="question-answer")
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(dirs['generate_qa'], f"{axis}.gguf"))
