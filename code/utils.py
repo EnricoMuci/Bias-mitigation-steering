@@ -57,6 +57,7 @@ def load_and_tokenize_contrastive(model_path: str, filepath: str, prompt: str = 
     tokenizer = AutoTokenizer.from_pretrained(model_path, token=hf_token)
     tokenizer.pad_token_id = tokenizer.eos_token_id
 
+
     ds_tok = Dataset()
     for entry in ds_raw.view_dataset():
         pos_tok = Dataset._apply_chat_template(
