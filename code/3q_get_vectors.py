@@ -2,10 +2,10 @@ import os
 import sys
 import datetime
 import torch
-from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import BitsAndBytesConfig
 from dialz import Dataset, SteeringModel, SteeringVector
 
-from code.utils_new import QuantizedSteeringModel
+from utils_new import QuantizedSteeringModel
 from utils import bbq_axes, load_and_tokenize_contrastive, contrastive_pairs
 
 if len(sys.argv) > 2:
