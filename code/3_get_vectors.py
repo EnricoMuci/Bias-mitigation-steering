@@ -5,8 +5,35 @@ import datetime
 from dialz import Dataset, SteeringModel, SteeringVector
 from utils import bbq_axes, load_and_tokenize_contrastive, contrastive_pairs
 
+if len(sys.argv) > 2:
+    model_name = sys.argv[1]
+    model_path = sys.argv[2]
+elif len(sys.argv) > 1:
+    model_name = sys.argv[1]
+    model_path = model_name
+else:
+    raise ValueError("Model name and model path must be provided as command-line arguments.")
 
+# Map model names to short names
+model_short_names = {
+    "Qwen/Qwen2.5-7B-Instruct": "qwen",
+    "meta-llama/Llama-3.1-8B-Instruct": "llama",
+    "mistralai/Mistral-7B-Instruct-v0.1": "mistral",
+}
 
+model_short_name = model_short_names.get(model_name)
+if not model_short_name:
+    raise ValueError(f"Unknown model name: {model_name}")
+
+dirs = {
+    "train": f"../vectors/{model_short_name}/train",
+    "train+prompt": f"../vectors/{model_short_name}/train+prompt",
+    "generate_ss": f"../vectors/{model_short_name}/generate_ss",
+    "generate_qa": f"../vectors/{model_short_name}/generate_qa",
+}
+
+for d in dirs.values():
+    os.makedirs(d, exist_ok=True)
 
 
 
