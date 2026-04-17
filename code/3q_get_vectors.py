@@ -39,6 +39,7 @@ for d in dirs.values():
     os.makedirs(d, exist_ok=True)
 
 try:
+    print(3*'\n', 'START', 3*'\n')
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_compute_dtype=torch.float16,
@@ -46,10 +47,10 @@ try:
         bnb_4bit_use_double_quant=True,
     )
     model = QuantizedSteeringModel(model_path, [5], quantization_config=bnb_config)
-    print('SUCCESS!')
+    print(3*'\n', 'SUCCESS', 3*'\n')
 except Exception as e:
-    print(f"ERROR: {e}")
-    model = SteeringModel(model_path, [5]) # Second element is arbritary as we're not generating yet
+    print(3*'\n', f'ERROR {e}', 3*'\n')
+    model = SteeringModel(model_path, [5])  # Second element is arbritary as we're not generating yet
 
 for axis in bbq_axes:
     print(f"Creating 4 vectors for {axis} at:", datetime.datetime.now())

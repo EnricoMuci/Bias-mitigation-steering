@@ -15,7 +15,7 @@ class QuantizedSteeringModel(SteeringModel):
         token: str = None,
         quantization_config=None,
     ):
-        # Chiama nn.Module.__init__() direttamente, saltando SteeringModel.__init__()
+        # Call nn.Module.__init__() directly, bypassing SteeringModel.__init__()
         torch.nn.Module.__init__(self)
         self.model_name = model_name
         self.token = token
@@ -23,7 +23,7 @@ class QuantizedSteeringModel(SteeringModel):
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name,
             token=token,
-            torch_dtype=torch.float16,
+            # dtype=torch.float16,
             quantization_config=quantization_config,
             device_map="auto",
         )
