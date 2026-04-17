@@ -46,7 +46,8 @@ try:
         bnb_4bit_quant_type="nf4",
         bnb_4bit_use_double_quant=True,
     )
-    model = QuantizedSteeringModel(model_path, [5], quantization_config=bnb_config)
+    model = QuantizedSteeringModel(model_path=model_path, layer_ids=[5],
+                                   model_name=None, quantization_config=bnb_config)
     print(3*'\n', 'SUCCESS', 3*'\n')
 except Exception as e:
     print(3*'\n', f'ERROR {e}', 3*'\n')

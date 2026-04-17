@@ -10,11 +10,11 @@ from transformers import AutoModelForCausalLM  # ,  BitsAndBytesConfig
 class QuantizedSteeringModel(SteeringModel):
     def __init__(
             self,
-            model_name: str,
+            model_name: str | None,
             layer_ids: typing.Iterable[int],
             model_path: str = None,
             token: str = None,
-            quantization_config=None,):
+            quantization_config=None, ):
         # Call nn.Module.__init__() directly, bypassing SteeringModel.__init__()
         torch.nn.Module.__init__(self)
         self.model_name = model_name
@@ -28,7 +28,7 @@ class QuantizedSteeringModel(SteeringModel):
                 quantization_config=quantization_config,
                 device_map="auto",
             )
-        else:
+        elif model_name is str:
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 # token=token,
@@ -46,7 +46,7 @@ class QuantizedSteeringModel(SteeringModel):
 
         layers = model_layer_list(self.model)
         self.layer_ids = [i if i >= 0 else len(layers) + i for i in layer_ids]
-        
+
         for layer_id in layer_ids:
             layer = layers[layer_id]
             if not isinstance(layer, SteeringModule):
