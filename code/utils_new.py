@@ -10,7 +10,7 @@ from transformers import AutoModelForCausalLM  # ,  BitsAndBytesConfig
 class QuantizedSteeringModel(SteeringModel):
     def __init__(
             self,
-            model_name: str | None,
+            model_name: str,
             layer_ids: typing.Iterable[int],
             model_path: str = None,
             token: str = None,
@@ -21,6 +21,7 @@ class QuantizedSteeringModel(SteeringModel):
         self.token = token
 
         if model_path is not None:
+            print('Caso giusto')
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_path,
                 # token=token,

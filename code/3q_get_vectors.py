@@ -39,7 +39,7 @@ for d in dirs.values():
     os.makedirs(d, exist_ok=True)
 
 try:
-    print(3*'\n', 'START', 3*'\n')
+    print(2*'\n', 'START', 2*'\n')
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_compute_dtype=torch.float16,
@@ -47,10 +47,10 @@ try:
         bnb_4bit_use_double_quant=True,
     )
     model = QuantizedSteeringModel(model_path=model_path, layer_ids=[5],
-                                   model_name=None, quantization_config=bnb_config)
-    print(3*'\n', 'SUCCESS', 3*'\n')
+                                   model_name=model_name, quantization_config=bnb_config)
+    print(2*'\n', 'SUCCESS', 2*'\n')
 except Exception as e:
-    print(3*'\n', f'ERROR {e}', 3*'\n')
+    print(2*'\n', f'ERROR {e}', 2*'\n')
     model = SteeringModel(model_path, [5])  # Second element is arbritary as we're not generating yet
 
 for axis in bbq_axes:
