@@ -68,6 +68,9 @@ for axis in bbq_axes:
                                                   prompt=f"Consider the bias related to {axis} in the following. ")
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(dirs['train+prompt'], f"{axis}.gguf"))
+    
+    if contrastive_pairs is None:
+        continue 
 
     ## Generated Dataset (using Dialz and sentence-starters)
     train_dataset = Dataset.create_dataset(
