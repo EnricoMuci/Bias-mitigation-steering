@@ -14,27 +14,24 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
 from dialz import Dataset, SteeringModel, SteeringVector
 from utils import bbq_axes, load_and_tokenize_contrastive, get_output
+from utils_new import *
 from transformers import AutoTokenizer, AutoConfig
+
 
 transformers.logging.set_verbosity_error()
 
-if len(sys.argv) > 1:
+if len(sys.argv) > 2:  # Path and name
     model_name = sys.argv[1]
-else:
-    raise ValueError("Model name must be provided as a command-line argument.")
+    model_path = sys.argv[2]
+elif len(sys.argv) > 1:  # Only Name
+    model_name = sys.argv[1]
+    model_path = model_name
+else:  # Error
+    raise ValueError("Model name and model path must be provided as command-line arguments.")
 
-# Map model names to short names
-model_short_names = {
-    "Qwen/Qwen2.5-7B-Instruct": "qwen",
-    "meta-llama/Llama-3.1-8B-Instruct": "llama",
-    "mistralai/Mistral-7B-Instruct-v0.1": "mistral",
-}
+model_short_name = get_short_name(model_name)
 
-model_short_name = model_short_names.get(model_name)
-if not model_short_name:
-    raise ValueError(f"Unknown model name: {model_name}")
-
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_path)
 tokenizer.pad_token_id = tokenizer.eos_token_id
 
 def batched_get_hiddens(

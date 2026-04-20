@@ -1,20 +1,18 @@
 import os
 import sys
 import datetime
-import torch
-from transformers import BitsAndBytesConfig
-from dialz import Dataset, SteeringModel, SteeringVector
+from dialz import Dataset, SteeringVector
 
-from utils_new import QuantizedSteeringModel
+from utils_new import create_quantized_model
 from utils import bbq_axes, load_and_tokenize_contrastive, contrastive_pairs
 
-if len(sys.argv) > 2:
+if len(sys.argv) > 2:  # Path and name
     model_name = sys.argv[1]
     model_path = sys.argv[2]
-elif len(sys.argv) > 1:
+elif len(sys.argv) > 1:  # Only Name
     model_name = sys.argv[1]
     model_path = model_name
-else:
+else: # Error
     raise ValueError("Model name and model path must be provided as command-line arguments.")
 
 # Map model names to short names
@@ -38,20 +36,7 @@ dirs = {
 for d in dirs.values():
     os.makedirs(d, exist_ok=True)
 
-try:
-    print(2*'\n', 'START', 2*'\n')
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-    )
-    model = QuantizedSteeringModel(model_path=model_path, layer_ids=[5],
-                                   model_name=model_name, quantization_config=bnb_config)
-    print(2*'\n', 'SUCCESS', 2*'\n')
-except Exception as e:
-    print(2*'\n', f'ERROR {e}', 2*'\n')
-    model = SteeringModel(model_path, [5])  # Second element is arbritary as we're not generating yet
+model = create_quantized_model(model_name, model_path)
 
 for axis in bbq_axes:
     print(f"Creating 4 vectors for {axis} at:", datetime.datetime.now())
