@@ -21,6 +21,7 @@ def get_short_name(model_name):
     else:
         return model_short_name
 
+
 class QuantizedSteeringModel(SteeringModel):
     def __init__(
             self,

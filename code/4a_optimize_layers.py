@@ -162,20 +162,20 @@ def visualize_2d_PCA(
 
 
 def get_linear_separability():
-    model = SteeringModel(model_name, [5]) # Second element is arbritary as we're not generating yet
+    model = create_quantized_model(model_name, model_path)
 
     ## Feed in model tokenizer and inputs from each contrastive dataset in python file 3
     for axis in bbq_axes:
 
         print(f"Creating vector for {axis} at:", datetime.datetime.now())
 
-        path  = f"../data/bbq_train/{axis}_train.json"
-        train_dataset = load_and_tokenize_contrastive(model_name, path)
+        path = f"../data/bbq_train/{axis}_train.json"
+        train_dataset = load_and_tokenize_contrastive(model_path, path)
         fig, scores = visualize_2d_PCA(train_dataset, model, tokenizer)
         scores.to_csv(f"../data/separability_scores/{model_short_name}/{axis}_train.csv", index=False)
         fig.savefig(f"../figs/{model_short_name}/{axis}_bbq_train.png")
 
-        train_dataset = load_and_tokenize_contrastive(model_name, path, prompt=f"Consider the bias related to {axis} in the following. ")
+        train_dataset = load_and_tokenize_contrastive(model_path, path, prompt=f"Consider the bias related to {axis} in the following. ")
         fig, scores = visualize_2d_PCA(train_dataset, model, tokenizer)
         scores.to_csv(f"../data/separability_scores/{model_short_name}/{axis}_train+prompt.csv", index=False)
         fig.savefig(f"../figs/{model_short_name}/{axis}_bbq_train+prompt.png")
@@ -220,7 +220,7 @@ def predict_row(row, model, vector, coeff):
 
 
 def get_acc_change_per_layer():
-    config = AutoConfig.from_pretrained(model_name)
+    config = AutoConfig.from_pretrained(model_path)
     num_layers = getattr(config, "n_layer", None) or config.num_hidden_layers
 
     for axis in bbq_axes:
@@ -236,7 +236,7 @@ def get_acc_change_per_layer():
             for layer in range(1,num_layers):
                 bbq_df = validation_df.copy()
 
-                model = SteeringModel(model_name, [layer])
+                model = QuantizedSteeringModel(model_name, [layer]) # FIXME
 
                 model.half() 
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
@@ -253,7 +253,7 @@ def get_acc_change_per_layer():
 
                 # if your true labels live in column "label", you can now compute accuracy:
                 bbq_correct = (bbq_df["prediction"] == bbq_df["label"]).sum()
-                bbq_accuracy    = bbq_correct / len(bbq_df)
+                bbq_accuracy = bbq_correct / len(bbq_df)
 
                 results.append({
                     'layer': layer,
