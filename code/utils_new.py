@@ -7,6 +7,17 @@ from dialz.vector import SteeringModule, model_layer_list
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig
 
 
+def get_arguments(argv):
+    if len(argv) > 2:  # Path and name
+        model_name = argv[1]
+        model_path = argv[2]
+        return model_name, model_path
+    elif len(argv) > 1:  # Only Name
+        model_name = argv[1]
+        return model_name, model_name
+    else:  # Error
+        raise ValueError("Model name and model path must be provided as command-line arguments.")
+
 def get_short_name(model_name):
     # Map model names to short names
     model_short_names = {
@@ -36,7 +47,7 @@ class QuantizedSteeringModel(SteeringModel):
         self.token = token
 
         if model_path is not None:
-            print('Caso giusto')
+            print(f'Loading preconfigured model from {model_path}')
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_path,
                 # token=token,
@@ -45,6 +56,7 @@ class QuantizedSteeringModel(SteeringModel):
                 device_map="auto",
             )
         elif model_name is str:
+            print(f'Loading defaul configurated {model_name}')
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 # token=token,

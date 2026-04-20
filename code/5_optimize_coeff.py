@@ -10,27 +10,15 @@ from datasets import load_dataset
 from dialz import SteeringModel, SteeringVector
 from utils import get_output
 from transformers import AutoTokenizer
+from utils_new import get_arguments, get_short_name, QuantizedSteeringModel
 
 transformers.logging.set_verbosity_error()
 
-if len(sys.argv) > 1:
-    model_name = sys.argv[1]
-else:
-    raise ValueError("Model name must be provided as a command-line argument.")
-
-# Map model names to short names
-model_short_names = {
-    "Qwen/Qwen2.5-7B-Instruct": "qwen",
-    "meta-llama/Llama-3.1-8B-Instruct": "llama",
-    "mistralai/Mistral-7B-Instruct-v0.1": "mistral",
-}
-
-model_short_name = model_short_names.get(model_name)
-if not model_short_name:
-    raise ValueError(f"Unknown model name: {model_name}")
+(model_name, model_path) = get_arguments(sys.argv)
+model_short_name = get_short_name(model_name)
 
 
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer = AutoTokenizer.from_pretrained(model_path)
 tokenizer.pad_token_id = tokenizer.eos_token_id
 
 print("Loading MMLU dataset...")
@@ -115,7 +103,7 @@ def get_best_coeffs():
             
             results = []
 
-            model = SteeringModel(model_name, [layer])
+            model = QuantizedSteeringModel(model_name, [layer], model_path)  # FIXME
             model.half()
 
             vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
@@ -133,7 +121,7 @@ def get_best_coeffs():
 
                 # if your true labels live in column "label", you can now compute accuracy:
                 bbq_correct = (bbq_df["prediction"] == bbq_df["label"]).sum()
-                bbq_accuracy    = bbq_correct / len(bbq_df)
+                bbq_accuracy = bbq_correct / len(bbq_df)
 
                 mmlu_valid[['ans', 'prediction', 'correct']] = mmlu_valid.apply(
                     predict_row,

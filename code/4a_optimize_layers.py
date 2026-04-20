@@ -1,13 +1,13 @@
 
 import tqdm
 import sys
-import torch
 import datetime
 import math
 import transformers
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
@@ -30,6 +30,7 @@ else:  # Error
     raise ValueError("Model name and model path must be provided as command-line arguments.")
 
 model_short_name = get_short_name(model_name)
+os.makedirs(f'../figs/{model_short_name}', exist_ok=True)
 
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 tokenizer.pad_token_id = tokenizer.eos_token_id
@@ -236,7 +237,7 @@ def get_acc_change_per_layer():
             for layer in range(1,num_layers):
                 bbq_df = validation_df.copy()
 
-                model = QuantizedSteeringModel(model_name, [layer]) # FIXME
+                model = QuantizedSteeringModel(model_name, [layer], model_path)  # FIXME
 
                 model.half() 
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')

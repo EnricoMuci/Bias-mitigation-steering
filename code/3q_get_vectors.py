@@ -5,26 +5,10 @@ from dialz import Dataset, SteeringVector
 
 from utils_new import create_quantized_model
 from utils import bbq_axes, load_and_tokenize_contrastive, contrastive_pairs
+from utils_new import get_arguments, get_short_name
 
-if len(sys.argv) > 2:  # Path and name
-    model_name = sys.argv[1]
-    model_path = sys.argv[2]
-elif len(sys.argv) > 1:  # Only Name
-    model_name = sys.argv[1]
-    model_path = model_name
-else: # Error
-    raise ValueError("Model name and model path must be provided as command-line arguments.")
-
-# Map model names to short names
-model_short_names = {
-    "Qwen/Qwen2.5-7B-Instruct": "qwen",
-    "meta-llama/Llama-3.1-8B-Instruct": "llama",
-    "mistralai/Mistral-7B-Instruct-v0.1": "mistral",
-}
-
-model_short_name = model_short_names.get(model_name)
-if not model_short_name:
-    raise ValueError(f"Unknown model name: {model_name}")
+(model_name, model_path) = get_arguments(sys.argv)
+model_short_name = get_short_name(model_name)
 
 dirs = {
     "train": f"../vectors/{model_short_name}/train",
