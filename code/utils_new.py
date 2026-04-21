@@ -18,6 +18,7 @@ def get_arguments(argv):
     else:  # Error
         raise ValueError("Model name and model path must be provided as command-line arguments.")
 
+
 def get_short_name(model_name):
     # Map model names to short names
     model_short_names = {

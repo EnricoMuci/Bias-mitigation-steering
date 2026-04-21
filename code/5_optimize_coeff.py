@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 
 from datasets import load_dataset
-from dialz import SteeringModel, SteeringVector
+from dialz import SteeringVector
 from utils import get_output
 from transformers import AutoTokenizer
 from utils_new import get_arguments, get_short_name, QuantizedSteeringModel
@@ -35,14 +35,14 @@ def predict_row(row, model, vector, coeff, task):
     question = row["question"]
 
     if task == "bbq":
-        context  = row["context"]
-        answers  = [row["ans0"], row["ans1"], row["ans2"]]
+        context = row["context"]
+        answers = [row["ans0"], row["ans1"], row["ans2"]]
         answer_letters = ["a", "b", "c"]
         correct_answer = row['label']
     
     elif task == "mmlu":
-        context       = ""
-        answers       = row["choices"]        
+        context = ""
+        answers = row["choices"]
         answer_letters = ["a", "b", "c", "d"]
         correct_answer = row['answer']
 
@@ -65,7 +65,7 @@ def predict_row(row, model, vector, coeff, task):
         if letter in generated_answer[:2]:
             predicted_label = i
             break
-    if predicted_label == -1 and task=='bbq':
+    if predicted_label == -1 and task == 'bbq':
         answers = [row["ans0"], row["ans1"], row["ans2"]]
         for i, answer in enumerate(answers):
             if answer in generated_answer:
@@ -154,5 +154,6 @@ def get_best_coeffs():
             os.makedirs(dir_path, exist_ok=True)
 
             results_df.to_csv(os.path.join(dir_path, f"{axis}_{vector_type}.csv"), index=False)
+
 
 get_best_coeffs()
