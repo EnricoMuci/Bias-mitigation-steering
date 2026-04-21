@@ -90,6 +90,12 @@ class QuantizedSteeringModel(SteeringModel):
         layers = model_layer_list(self.model)
         self.layer_ids = [i if i >= 0 else len(layers) + i for i in layer_ids]
 
+        # FIXME: TEMPORAL SECTION
+        print("Device map:", getattr(self.model, 'hf_device_map', 'N/A'))
+        for name, param in self.model.named_parameters():
+            print(f"{name}: {param.device}")
+            break  # END
+
         for layer_id in layer_ids:
             layer = layers[layer_id]
             if not isinstance(layer, SteeringModule):
