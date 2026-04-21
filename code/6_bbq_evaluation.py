@@ -59,7 +59,7 @@ def run_bbq_evaluation(model, vector, coeff, axis, tokenizer, use_fairness_promp
     print(f"Running BBQ evaluation for {axis}...")
     
     # Load test data
-    test_df = pd.read_csv(f"../data/bbq_test/{axis}_test.csv") # stereotype 
+    test_df = pd.read_csv(f"../data/bbq_test/{axis}_test.csv")  # stereotype
     
     # Apply predictions
     test_df[['ans', 'prediction', 'correct']] = test_df.apply(

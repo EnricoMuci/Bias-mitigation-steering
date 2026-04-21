@@ -12,7 +12,7 @@ import os
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
-from dialz import Dataset, SteeringModel, SteeringVector
+from dialz import SteeringVector
 from utils import bbq_axes, load_and_tokenize_contrastive, get_output
 from utils_new import *
 from transformers import AutoTokenizer, AutoConfig
@@ -58,7 +58,7 @@ def batched_get_hiddens(
         dict mapping layer -> array of shape (len(inputs), hidden_dim)
     """
     batched_inputs = [inputs[i:i + batch_size] for i in range(0, len(inputs), batch_size)]
-    hidden_states = {layer: [] for layer in hidden_layers} # dictionary  int: []
+    hidden_states = {layer: [] for layer in hidden_layers}  # dictionary  int: []
 
     with torch.no_grad():
         for batch in tqdm.tqdm(batched_inputs, desc="Getting hiddens"):
@@ -85,13 +85,13 @@ def batched_get_hiddens(
 
 
 def visualize_2d_PCA(
-    inputs,
-    model,
-    tokenizer,
-    pooling: str = 'final',  # 'final' or 'mean'
-    n_cols: int = 5,
-    batch_size: int = 32
-):
+        inputs,
+        model,
+        tokenizer,
+        pooling: str = 'final',  # 'final' or 'mean'
+        n_cols: int = 5,
+        batch_size: int = 32
+    ):
     """
     Perform 2D PCA on the hidden states of positive vs negative examples for each layer,
     plot all layers in a grid, and compute linear separability using a logistic classifier.
@@ -234,7 +234,7 @@ def get_acc_change_per_layer():
             print(f"Processing layers for {axis} on vector {vector_type} at ")
             results = []
 
-            for layer in range(1,num_layers):
+            for layer in range(1, num_layers):
                 bbq_df = validation_df.copy()
 
                 model = QuantizedSteeringModel(model_name, [layer], model_path)  # FIXME

@@ -104,7 +104,7 @@ def get_best_coeffs():
             results = []
 
             model = QuantizedSteeringModel(model_name, [layer], model_path)  # FIXME
-            model.half()
+            # model.half() # FIXME
 
             vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
 

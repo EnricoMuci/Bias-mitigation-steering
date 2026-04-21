@@ -93,7 +93,8 @@ class QuantizedSteeringModel(SteeringModel):
         for layer_id in layer_ids:
             layer = layers[layer_id]
             if not isinstance(layer, SteeringModule):
-                layers[layer_id] = SteeringModule(layer)
+                with torch.no_grad():  # FIXME
+                    layers[layer_id] = SteeringModule(layer)
             else:
                 warnings.warn("Trying to rewrap a wrapped model! Try calling .unwrap first.")
 
