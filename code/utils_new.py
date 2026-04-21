@@ -62,24 +62,6 @@ class QuantizedSteeringModel(SteeringModel):
 
         self.model = AutoModelForCausalLM.from_pretrained(load_path, **load_kwargs)
 
-        # # OLD Version
-        # if model_path is not None:
-        #     print(f'Loading preconfigured model from {model_path}')
-        #     self.model = AutoModelForCausalLM.from_pretrained(
-        #         model_path,
-        #         quantization_config=quantization_config,
-        #         device_map="auto",
-        #     )
-        # elif isinstance(model_name, str):
-        #     print(f'Loading defaul configurated {model_name}')
-        #     self.model = AutoModelForCausalLM.from_pretrained(
-        #         model_name,
-        #         # token=token,
-        #         # dtype=torch.float16,
-        #         quantization_config=quantization_config,
-        #         device_map="auto",
-        #     )
-
         if quantization_config is None:
             self.model = self.model.to(
                 "cuda:0" if torch.cuda.is_available()

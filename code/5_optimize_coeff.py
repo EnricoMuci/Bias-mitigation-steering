@@ -10,7 +10,7 @@ from datasets import load_dataset
 from dialz import SteeringVector
 from utils import get_output
 from transformers import AutoTokenizer
-from utils_new import get_arguments, get_short_name, QuantizedSteeringModel
+from utils_new import get_arguments, get_short_name, create_quantized_model
 
 transformers.logging.set_verbosity_error()
 
@@ -103,7 +103,7 @@ def get_best_coeffs():
             
             results = []
 
-            model = QuantizedSteeringModel(model_name, [layer], model_path)  # FIXME
+            model = create_quantized_model(model_name, model_path)  # FIXME
             # model.half() # FIXME
 
             vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
