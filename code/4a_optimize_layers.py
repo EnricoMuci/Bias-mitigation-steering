@@ -237,7 +237,7 @@ def get_acc_change_per_layer():
             for layer in range(1, num_layers):
                 bbq_df = validation_df.copy()
 
-                model = QuantizedSteeringModel(model_name, [layer], model_path)  # FIXME
+                model = create_quantized_model(model_name, [layer], model_path)  # FIXME
 
                 model.half() 
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
@@ -268,4 +268,4 @@ def get_acc_change_per_layer():
 
 
 get_linear_separability()
-# get_acc_change_per_layer()
+get_acc_change_per_layer()
