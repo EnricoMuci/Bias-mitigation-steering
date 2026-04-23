@@ -245,7 +245,7 @@ def get_acc_change_per_layer():
             for layer in range(1, num_layers):
                 bbq_df = validation_df.copy()
 
-                model = create_quantized_model(model_name, model_path[layer], [layer])  # FIXME
+                model = create_quantized_model(model_name, model_path, [layer])  # FIXME
 
                 model.half()
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
