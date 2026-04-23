@@ -20,14 +20,22 @@ from transformers import AutoTokenizer, AutoConfig
 
 transformers.logging.set_verbosity_error()
 
-if len(sys.argv) > 2:  # Path and name
-    model_name = sys.argv[1]
-    model_path = sys.argv[2]
-elif len(sys.argv) > 1:  # Only Name
-    model_name = sys.argv[1]
-    model_path = model_name
-else:  # Error
-    raise ValueError("Model name and model path must be provided as command-line arguments.")
+# if len(sys.argv) > 2:  # Path and name
+#     model_name = sys.argv[1]
+#     model_path = sys.argv[2]
+# elif len(sys.argv) > 1:  # Only Name
+#     model_name = sys.argv[1]
+#     model_path = model_name
+# else:  # Error
+#     raise ValueError("Model name and model path must be provided as command-line arguments.")
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-m', '--mode', type=str, default='full') # check end of file
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
+parser.add_argument('-p', '--path', type=str, default=None)  # model path
+args = parser.parse_args()
+
+(model_name, model_path) = get_args([args.name, args.path])
 
 model_short_name = get_short_name(model_name)
 os.makedirs(f'../figs/{model_short_name}', exist_ok=True)
@@ -268,9 +276,6 @@ def get_acc_change_per_layer():
 
 
 if __name__ == '__main__':  # FIXME
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--mode', type=str, default='full')
-    args = parser.parse_args()
 
     if args.mode in ['separability', 'full']:
         get_linear_separability()
