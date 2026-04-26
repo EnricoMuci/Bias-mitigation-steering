@@ -6,13 +6,18 @@ from dialz import SteeringModel
 from dialz.vector import SteeringModule, model_layer_list
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig
 
+def get_args(args):
+    model_name = args[0]
+    model_path = args[1]
+    return model_name, model_path
 
 def get_arguments(argv):
+    # TODO: OLD
     if len(argv) > 2:  # Path and name
         model_name = argv[1]
         model_path = argv[2]
         return model_name, model_path
-    elif len(argv) > 1:  # Only Name
+    elif len(argv) > 1 or argv[2]:  # Only Name
         model_name = argv[1]
         return model_name, model_name
     else:  # Error
