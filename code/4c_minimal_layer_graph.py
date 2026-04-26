@@ -40,11 +40,15 @@ def create_minimal_age_layer_graph():
     y_min, y_max = ax.get_ylim()
     y_ticks = np.linspace(y_min, y_max, 6)
     ax.set_yticks(y_ticks)
-    ax.set_yticklabels([])
-    ax.tick_params(left=False)  # Remove y-axis tick marks
+    # ax.set_yticklabels([])
+    # ax.tick_params(left=False)  # Remove y-axis tick marks
 
     # Large x-axis title
     ax.set_xlabel('Layer', fontsize=20)
+    ax.set_ylabel('Accuracy', fontsize=20)
+
+    # NEW: legend
+    ax.legend(fontsize=14, loc='lower right')
 
     # Remove borders/spines except bottom for x-axis
     ax.spines['top'].set_visible(False)
