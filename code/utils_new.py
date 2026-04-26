@@ -87,7 +87,7 @@ class QuantizedSteeringModel(SteeringModel):
                 warnings.warn("Trying to rewrap a wrapped model! Try calling .unwrap first.")
 
 
-def create_quantized_model(model_name, model_path=None, layer_ids=None):
+def create_quantized_model(model_name, model_path):
     try:
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -95,10 +95,8 @@ def create_quantized_model(model_name, model_path=None, layer_ids=None):
             bnb_4bit_quant_type="nf4",
             bnb_4bit_use_double_quant=True,
         )
-        if layer_ids is None:
-            layer_ids = [5]
         return QuantizedSteeringModel(
-            model_path=model_path, layer_ids=layer_ids,
+            model_path=model_path, layer_ids=[5],
             model_name=model_name, quantization_config=bnb_config)
     except Exception as e:
         return SteeringModel(model_path, [5])  # Second element is arbritary as we're not generating yet
