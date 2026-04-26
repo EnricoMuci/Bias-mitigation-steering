@@ -11,8 +11,8 @@ def create_minimal_age_layer_graph():
     Create a minimal version of the age layer graph with green vertical line at layer 13
     """
     # Load data
-    sep_data = pd.read_csv('../data/separability_scores/mistral/age_train+prompt.csv')
-    acc_data = pd.read_csv('../data/layer_scores/mistral/age_train+prompt.csv')
+    sep_data = pd.read_csv('../data/original/separability_scores/mistral/age_train+prompt.csv')
+    acc_data = pd.read_csv('../data/original/layer_scores/mistral/age_train+prompt.csv')
 
     # Create figure with clean minimal design
     fig, ax = plt.subplots(figsize=(7.2, 5.4))
@@ -60,10 +60,13 @@ def create_minimal_age_layer_graph():
     plt.tight_layout()
 
     # Save in the main figs directory
-    os.makedirs('../figs', exist_ok=True)
-    plt.savefig('../figs/age_minimal_layers.pdf', dpi=300, bbox_inches='tight')
-    plt.savefig('../figs/age_minimal_layers.svg', dpi=300, bbox_inches='tight')
-    plt.savefig('../figs/age_minimal_layers.png', dpi=300, bbox_inches='tight')
+    figs_path = '../figs'
+    minimal_path = os.path.join(figs_path, 'minimal_graph')
+    os.makedirs(minimal_path, exist_ok=True)
+    plt.savefig(f'{minimal_path}/age_minimal_layers.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{minimal_path}/age_minimal_layers.svg', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{minimal_path}/age_minimal_layers.png', dpi=300, bbox_inches='tight')
+
 
     print("Minimal age layer graph saved as age_minimal_layers.pdf, .svg, and .png")
     plt.show()

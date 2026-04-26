@@ -176,8 +176,8 @@ def get_linear_separability():
     ## Feed in model tokenizer and inputs from each contrastive dataset in python file 3
     for axis in bbq_axes:
         print(f"Creating vector for {axis} at:", datetime.datetime.now())
-
         path = f"../data/bbq_train/{axis}_train.json"
+
         train_dataset = load_and_tokenize_contrastive(model_path, path)
         fig, scores = visualize_2d_PCA(train_dataset, model, tokenizer)
         scores.to_csv(f"../data/separability_scores/{model_short_name}/{axis}_train.csv", index=False)
