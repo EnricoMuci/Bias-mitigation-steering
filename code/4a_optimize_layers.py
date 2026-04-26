@@ -231,6 +231,8 @@ def predict_row(row, model, vector, coeff):
 def get_acc_change_per_layer():
     config = AutoConfig.from_pretrained(model_path)
     num_layers = getattr(config, "n_layer", None) or config.num_hidden_layers
+    model = create_quantized_model(model_name, model_path)
+    # model.half()
 
     for axis in bbq_axes:
 
@@ -242,13 +244,26 @@ def get_acc_change_per_layer():
             print(f"Processing layers for {axis} on vector {vector_type} at ")
             results = []
 
+            # vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
+
+
+
             for layer in range(1, num_layers):
                 bbq_df = validation_df.copy()
 
-                model = create_quantized_model(model_name, model_path, [layer])  # FIXME
-
-                model.half()
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
+
+                # Layer unwrapping : NEW
+                layers = model_layer_list(model.model)  # NEW
+                for old_id in model.layer_ids:
+                    old_layer = layers[old_id]
+                    if isinstance(old_layer, SteeringModule):
+                        layers[old_id] = old_layer.module  # unwrap
+
+                model.layer_ids = [layer]
+                if not isinstance(layers[layer], SteeringModule):
+                    layers[layer] = SteeringModule(layers[layer])
+                # NEW Wrapping Ended 
 
                 start_time = datetime.datetime.now()
                 print(f"\n\n=== layer = {layer} @ {start_time} ===")
