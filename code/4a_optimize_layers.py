@@ -258,7 +258,7 @@ def get_acc_change_per_layer():
                 for old_id in model.layer_ids:
                     old_layer = layers[old_id]
                     if isinstance(old_layer, SteeringModule):
-                        layers[old_id] = old_layer.modules  # unwrap
+                        layers[old_id] = old_layer.block  # unwrap
 
                 model.layer_ids = [layer]
                 if not isinstance(layers[layer], SteeringModule):
