@@ -1,7 +1,6 @@
 import argparse
 
 import tqdm
-import sys
 import datetime
 import math
 import transformers
@@ -20,20 +19,17 @@ from transformers import AutoTokenizer, AutoConfig
 
 transformers.logging.set_verbosity_error()
 
-# if len(sys.argv) > 2:  # Path and name
-#     model_name = sys.argv[1]
-#     model_path = sys.argv[2]
-# elif len(sys.argv) > 1:  # Only Name
-#     model_name = sys.argv[1]
-#     model_path = model_name
-# else:  # Error
-#     raise ValueError("Model name and model path must be provided as command-line arguments.")
-
 parser = argparse.ArgumentParser()
-parser.add_argument('-m', '--mode', type=str, default='full') # check end of file
+parser.add_argument('-m', '--mode', type=str, default='full')  # set at the end of file
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
+parser.add_argument('-a', '--axes', nargs='*', type=str, default=None) # axes to be processed
 args = parser.parse_args()
+
+if args.axes is not None:
+    bbq_axes = args.axes  # list type
+# else: default list imported from utils
+
 
 (model_name, model_path) = get_args([args.name, args.path])
 
@@ -100,7 +96,7 @@ def visualize_2d_PCA(
         pooling: str = 'final',  # 'final' or 'mean'
         n_cols: int = 5,
         batch_size: int = 32
-):
+    ):
     """
     Perform 2D PCA on the hidden states of positive vs negative examples for each layer,
     plot all layers in a grid, and compute linear separability using a logistic classifier.
@@ -243,10 +239,7 @@ def get_acc_change_per_layer():
         for vector_type in ["train", "train+prompt"]:
             print(f"Processing layers for {axis} on vector {vector_type} at ")
             results = []
-
             # vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
-
-
 
             for layer in range(1, num_layers):
                 bbq_df = validation_df.copy()
@@ -254,7 +247,7 @@ def get_acc_change_per_layer():
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
 
                 # Layer unwrapping : NEW
-                layers = model_layer_list(model.model)  # NEW
+                layers = model_layer_list(model.model)
                 for old_id in model.layer_ids:
                     old_layer = layers[old_id]
                     if isinstance(old_layer, SteeringModule):
@@ -291,7 +284,6 @@ def get_acc_change_per_layer():
 
 
 if __name__ == '__main__':  # FIXME
-
     if args.mode in ['separability', 'full']:
         get_linear_separability()
     if args.mode in ['layer', 'full']:
