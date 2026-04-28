@@ -26,6 +26,7 @@ parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None) # axes to be processed
 args = parser.parse_args()
 
+all_bbq_axes = bbq_axes
 if args.axes is not None:
     bbq_axes = args.axes  # list type
 # else: default list imported from utils
@@ -171,6 +172,8 @@ def get_linear_separability():
 
     ## Feed in model tokenizer and inputs from each contrastive dataset in python file 3
     for axis in bbq_axes:
+        if axis not in all_bbq_axes: # NEW
+            continue
         print(f"Creating vector for {axis} at:", datetime.datetime.now())
         path = f"../data/bbq_train/{axis}_train.json"
 
