@@ -23,7 +23,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--mode', type=str, default='full')  # set at the end of file
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
-parser.add_argument('-a', '--axes', nargs='*', type=str, default=None) # axes to be processed
+parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
+parser.add_argument('-t', '--type', type=int, default=2) # type for get_accuracy_per_layer
 args = parser.parse_args()
 
 all_bbq_axes = bbq_axes
@@ -133,6 +134,11 @@ def visualize_2d_PCA(
 
         # 2-component PCA fitted on diffs
         pca2 = PCA(n_components=2, whiten=False).fit(diffs)
+
+        # NEW: avoid flipping
+        signs = np.sign(pca2.components_[np.arange(2), np.argmax(np.abs(pca2.components_), axis=1)])
+        pca2.components_ *= signs[:, np.newaxis]
+
         proj_all = pca2.transform(h_states)  # project all 2N on PC1/PC2
 
         # scatter positives vs negatives
@@ -172,7 +178,8 @@ def get_linear_separability():
 
     ## Feed in model tokenizer and inputs from each contrastive dataset in python file 3
     for axis in bbq_axes:
-        if axis not in all_bbq_axes: # NEW
+        if axis not in all_bbq_axes:  # NEW
+            print(f'Axis {axis} is not admitted')
             continue
         print(f"Creating vector for {axis} at:", datetime.datetime.now())
         path = f"../data/bbq_train/{axis}_train.json"
@@ -233,13 +240,22 @@ def get_acc_change_per_layer():
     model = create_quantized_model(model_name, model_path)
     # model.half()
 
+    all_types = ["train", "train+prompt"]  # NEW Block
+    if args.type == 2:
+        set_types = all_types.copy()
+    else:
+        set_types = [all_types[args.type], ]
+
     for axis in bbq_axes:
+        if axis not in all_bbq_axes:  # NEW
+            print(f'Axis {axis} is not admitted')
+            continue
 
         # Load in validation set
         validation_df = pd.read_csv(f"../data/bbq_validate/{axis}_validate.csv")
 
-        # for each of four vectors
-        for vector_type in ["train", "train+prompt"]:
+        # for each of our vectors
+        for vector_type in set_types:  # ["train", "train+prompt"]:
             print(f"Processing layers for {axis} on vector {vector_type} at ")
             results = []
             # vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
@@ -259,7 +275,7 @@ def get_acc_change_per_layer():
                 model.layer_ids = [layer]
                 if not isinstance(layers[layer], SteeringModule):
                     layers[layer] = SteeringModule(layers[layer])
-                # NEW Wrapping Ended
+                # END NEW Wrapping
 
                 start_time = datetime.datetime.now()
                 print(f"\n\n=== layer = {layer} @ {start_time} ===")
