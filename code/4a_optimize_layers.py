@@ -9,10 +9,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
+from dialz import SteeringVector
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
-from dialz import SteeringVector
+from sklearn.utils.extmath import svd_flip
+
 from utils import bbq_axes, load_and_tokenize_contrastive, get_output
 from utils_new import *
 from transformers import AutoTokenizer, AutoConfig
@@ -136,8 +138,11 @@ def visualize_2d_PCA(
         pca2 = PCA(n_components=2, whiten=False).fit(diffs)
 
         # NEW: avoid flipping
-        signs = np.sign(pca2.components_[np.arange(2), np.argmax(np.abs(pca2.components_), axis=1)])
-        pca2.components_ *= signs[:, np.newaxis]
+        # signs = np.sign(pca2.components_[np.arange(2), np.argmax(np.abs(pca2.components_), axis=1)])
+        # pca2.components_ *= signs[:, np.newaxis]
+        pca2.components_, _ = svd_flip(pca2.components_.T, np.zeros_like(pca2.components_))
+        pca2.components_ = pca2.components_.T
+        # END: avoid flipping
 
         proj_all = pca2.transform(h_states)  # project all 2N on PC1/PC2
 
