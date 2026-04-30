@@ -135,13 +135,13 @@ def visualize_2d_PCA(
         diffs = h_states[::2] - h_states[1::2]  # shape (N, D)
 
         # 2-component PCA fitted on diffs
-        pca2 = PCA(n_components=2, whiten=False).fit(diffs)
+        pca2 = PCA(n_components=2, whiten=False).fit(h_states)  # fit(diffs)
 
         # NEW: avoid flipping
-        # signs = np.sign(pca2.components_[np.arange(2), np.argmax(np.abs(pca2.components_), axis=1)])
-        # pca2.components_ *= signs[:, np.newaxis]
-        pca2.components_, _ = svd_flip(pca2.components_.T, np.zeros_like(pca2.components_))
-        pca2.components_ = pca2.components_.T
+        signs = np.sign(pca2.components_[np.arange(2), np.argmax(np.abs(pca2.components_), axis=1)])
+        pca2.components_ *= signs[:, np.newaxis]
+        # pca2.components_, _ = svd_flip(pca2.components_.T, np.zeros_like(pca2.components_))
+        # pca2.components_ = pca2.components_.T
         # END: avoid flipping
 
         proj_all = pca2.transform(h_states)  # project all 2N on PC1/PC2
