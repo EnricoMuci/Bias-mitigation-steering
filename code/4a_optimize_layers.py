@@ -15,7 +15,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
 from sklearn.utils.extmath import svd_flip
 
-from utils import bbq_axes, load_and_tokenize_contrastive, get_output
+from utils import load_and_tokenize_contrastive, get_output, bbq_axes
 from utils_new import *
 from transformers import AutoTokenizer, AutoConfig
 
@@ -26,13 +26,14 @@ parser.add_argument('-m', '--mode', type=str, default='full')  # set at the end 
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
-parser.add_argument('-t', '--type', type=int, default=2) # type for get_accuracy_per_layer
+parser.add_argument('-t', '--type', type=int, default=2)  # type for get_accuracy_per_layer
 args = parser.parse_args()
 
-all_bbq_axes = bbq_axes
+
 if args.axes is not None:
-    bbq_axes = args.axes  # list type
-# else: default list imported from utils
+    chosen_axes = args.axes.copy()  # list type
+else:
+    chosen_axes = bbq_axes
 
 
 (model_name, model_path) = get_args([args.name, args.path])
@@ -140,6 +141,7 @@ def visualize_2d_PCA(
         # NEW: avoid flipping
         signs = np.sign(pca2.components_[np.arange(2), np.argmax(np.abs(pca2.components_), axis=1)])
         pca2.components_ *= signs[:, np.newaxis]
+
         # pca2.components_, _ = svd_flip(pca2.components_.T, np.zeros_like(pca2.components_))
         # pca2.components_ = pca2.components_.T
         # END: avoid flipping
@@ -182,8 +184,8 @@ def get_linear_separability():
     model = create_quantized_model(model_name, model_path)
 
     ## Feed in model tokenizer and inputs from each contrastive dataset in python file 3
-    for axis in bbq_axes:
-        if axis not in all_bbq_axes:  # NEW
+    for axis in chosen_axes:
+        if axis not in bbq_axes:  # NEW
             print(f'Axis {axis} is not admitted')
             continue
         print(f"Creating vector for {axis} at:", datetime.datetime.now())
@@ -251,8 +253,8 @@ def get_acc_change_per_layer():
     else:
         set_types = [all_types[args.type], ]
 
-    for axis in bbq_axes:
-        if axis not in all_bbq_axes:  # NEW
+    for axis in chosen_axes:
+        if axis not in bbq_axes:  # NEW
             print(f'Axis {axis} is not admitted')
             continue
 
