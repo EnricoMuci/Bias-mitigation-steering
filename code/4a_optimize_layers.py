@@ -26,7 +26,7 @@ parser.add_argument('-m', '--mode', type=str, default='full')  # set at the end 
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
-parser.add_argument('-t', '--type', type=int, default=2)  # type for get_accuracy_per_layer
+parser.add_argument('-t', '--type', type=int, default=2)  # type for get_acc_change_per_layer
 args = parser.parse_args()
 
 
@@ -128,6 +128,8 @@ def visualize_2d_PCA(
 
     scores = []
 
+    reference_components = None # NEW to avoid flipping
+
     # Loop over layers
     for idx, layer in enumerate(tqdm.tqdm(hidden_layers, desc="PCA & Classify")):
         ax = axes[idx]
@@ -138,13 +140,19 @@ def visualize_2d_PCA(
         # 2-component PCA fitted on diffs
         pca2 = PCA(n_components=2, whiten=False).fit(diffs)  # fit(diffs)
 
-        # NEW: avoid flipping
-        signs = np.sign(pca2.components_[np.arange(2), np.argmax(np.abs(pca2.components_), axis=1)])
-        pca2.components_ *= signs[:, np.newaxis]
+        if reference_components is None: # NEW: avoid flipping
+            # first layer
+            signs = np.sign(pca2.components_[np.arange(2), np.argmax(np.abs(pca2.components_), axis=1)])
+            pca2.components_ *= signs[:, np.newaxis]
 
-        # pca2.components_, _ = svd_flip(pca2.components_.T, np.zeros_like(pca2.components_))
-        # pca2.components_ = pca2.components_.T
-        # END: avoid flipping
+            # pca2.components_, _ = svd_flip(pca2.components_.T, np.zeros_like(pca2.components_))
+            # pca2.components_ = pca2.components_.T
+            # END: avoid flipping
+        else:  # from second layer to last one
+            for k in range(2):
+                if np.dot(pca2.components_[k], reference_components[k]) < 0:
+                    pca2.components_[k] *= -1
+            reference_components = pca2.components_.copy()
 
         proj_all = pca2.transform(h_states)  # project all 2N on PC1/PC2
 
