@@ -92,6 +92,11 @@ def get_best_coeffs():
     for file in top_files:
         # Replace hardcoded "mistral" with model_short_name
         file_path = f"../data/layer_scores/{model_short_name}/best_layers/{file}.csv"
+        
+        if not os.path.exists(file_path):
+            print(f"File riassuntivo {file_path} non trovato. Salto questa configurazione.")
+            continue
+            
         best_layers = pd.read_csv(file_path)
         print(best_layers.head())
         print(f"Processing {file}")
@@ -100,14 +105,17 @@ def get_best_coeffs():
             axis = row['axis']
             layer = row['max_layer']
             vector_type = row['vt']
-            # Load in validation set
-            validation_df = pd.read_csv(f"../data/bbq_validate/{axis}_validate.csv")
 
-            print(f"Running co-effs for {axis} on vector {vector_type} at {datetime.datetime.now()}")
+            try:
+                # Load in validation set
+                validation_df = pd.read_csv(f"../data/bbq_validate/{axis}_validate.csv")
+                vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
+            except FileNotFoundError as e:
+                print(f"File mancante per l'asse {axis} ({vector_type}): {e}. Salto...")
+                continue
             
+            print(f"Running co-effs for {axis} on vector {vector_type} at {datetime.datetime.now()}")
             results = []
-
-            vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
 
             for coeff in np.arange(-2.0, 2.1, 0.2):
                 bbq_df = validation_df.copy()
