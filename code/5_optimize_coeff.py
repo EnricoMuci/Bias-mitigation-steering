@@ -83,11 +83,15 @@ def predict_row(row, model, vector, coeff, task):
 
 def get_best_coeffs():
 
+    # Load the model once globally instead of multiple times inside the loop
+    model = create_quantized_model(model_name, model_path)  # FIXME solved
+    # model.half() # FIXME
+
     top_files = ["top_train", "top_train+prompt"]
 
     for file in top_files:
-
-        file_path = f"../data/layer_scores/mistral/best_layers/{file}.csv"
+        # Replace hardcoded "mistral" with model_short_name
+        file_path = f"../data/layer_scores/{model_short_name}/best_layers/{file}.csv"
         best_layers = pd.read_csv(file_path)
         print(best_layers.head())
         print(f"Processing {file}")
@@ -102,9 +106,6 @@ def get_best_coeffs():
             print(f"Running co-effs for {axis} on vector {vector_type} at {datetime.datetime.now()}")
             
             results = []
-
-            model = create_quantized_model(model_name, model_path)  # FIXME
-            # model.half() # FIXME
 
             vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
 

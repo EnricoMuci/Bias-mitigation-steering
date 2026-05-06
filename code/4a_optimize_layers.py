@@ -13,7 +13,6 @@ from dialz import SteeringVector
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
-from sklearn.utils.extmath import svd_flip
 
 from utils import load_and_tokenize_contrastive, get_output, bbq_axes
 from utils_new import *
@@ -128,7 +127,7 @@ def visualize_2d_PCA(
 
     scores = []
 
-    reference_components = None # NEW to avoid flipping
+    reference_components = None  # NEW to avoid flipping
 
     # Loop over layers
     for idx, layer in enumerate(tqdm.tqdm(hidden_layers, desc="PCA & Classify")):
@@ -140,7 +139,7 @@ def visualize_2d_PCA(
         # 2-component PCA fitted on diffs
         pca2 = PCA(n_components=2, whiten=False).fit(diffs)  # fit(diffs)
 
-        if reference_components is None: # NEW: avoid flipping
+        if reference_components is None:  # NEW: avoid flipping
             # first layer
             signs = np.sign(pca2.components_[np.arange(2), np.argmax(np.abs(pca2.components_), axis=1)])
             pca2.components_ *= signs[:, np.newaxis]
