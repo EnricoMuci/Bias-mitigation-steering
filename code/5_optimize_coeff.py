@@ -94,7 +94,7 @@ def get_best_coeffs():
         file_path = f"../data/layer_scores/{model_short_name}/best_layers/{file}.csv"
         
         if not os.path.exists(file_path):
-            print(f"File riassuntivo {file_path} non trovato. Salto questa configurazione.")
+            print(f"Missing the following file:\n{file_path}")
             continue
             
         best_layers = pd.read_csv(file_path)
@@ -111,7 +111,7 @@ def get_best_coeffs():
                 validation_df = pd.read_csv(f"../data/bbq_validate/{axis}_validate.csv")
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
             except FileNotFoundError as e:
-                print(f"File mancante per l'asse {axis} ({vector_type}): {e}. Salto...")
+                print(f"Missing axis: {axis} ({vector_type}).\nError: {e}")
                 continue
             
             print(f"Running co-effs for {axis} on vector {vector_type} at {datetime.datetime.now()}")
