@@ -1,10 +1,10 @@
 
-import sys
 import os
 import datetime
 import transformers
 import pandas as pd
 import numpy as np
+import argparse
 
 from datasets import load_dataset
 from dialz import SteeringVector
@@ -14,16 +14,22 @@ from utils_new import get_arguments, get_short_name, create_quantized_model
 
 transformers.logging.set_verbosity_error()
 
-(model_name, model_path) = get_arguments(sys.argv)
+parser = argparse.ArgumentParser()
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
+parser.add_argument('-p', '--path', type=str, default=None)  # model path
+parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
+args = parser.parse_args()
+
+(model_name, model_path) = get_arguments([args.name, args.path])
 model_short_name = get_short_name(model_name)
 
 
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 tokenizer.pad_token_id = tokenizer.eos_token_id
 
-print("Loading MMLU dataset...")
+print("\nLoading MMLU dataset...")
 mmlu = load_dataset("cais/mmlu", "all", split="test")
-print("Processing MMLU dataset...")
+print("\nProcessing MMLU dataset...")
 full_df = pd.DataFrame(mmlu)
 
 # Get an equal sample from all subjects up to roughly 1000 questions
@@ -84,16 +90,17 @@ def predict_row(row, model, vector, coeff, task):
 def get_best_coeffs():
 
     # Load the model once globally instead of multiple times inside the loop
-    model = create_quantized_model(model_name, model_path)  # FIXME solved
-    # model.half() # FIXME
+    model = create_quantized_model(model_name, model_path) # NEW
 
-    top_files = ["top_train", "top_train+prompt"]
+    # top_files = ["top_train", "top_train+prompt"]
+    top_files = ["top_layer_train", "top_layer_train+prompt"]
 
     for file in top_files:
-        # Replace hardcoded "mistral" with model_short_name
         file_path = f"../data/layer_scores/{model_short_name}/best_layers/{file}.csv"
         
         if not os.path.exists(file_path):
+            # In best_layers there should be only
+            # top_layer_train.csv and top_layer_train+prompt.csv
             print(f"Missing the following file:\n{file_path}")
             continue
             
@@ -109,7 +116,7 @@ def get_best_coeffs():
             try:
                 # Load in validation set
                 validation_df = pd.read_csv(f"../data/bbq_validate/{axis}_validate.csv")
-                vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
+                vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')  # steer
             except FileNotFoundError as e:
                 print(f"Missing axis: {axis} ({vector_type}).\nError: {e}")
                 continue
@@ -137,7 +144,6 @@ def get_best_coeffs():
                     axis=1,
                     args=(model, vector, coeff, 'mmlu')
                 )
-
 
                 # compute accuracy
                 mmlu_correct = (mmlu_valid["prediction"] == mmlu_valid["answer"]).sum()

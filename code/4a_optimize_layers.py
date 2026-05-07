@@ -36,7 +36,6 @@ else:
 
 
 (model_name, model_path) = get_args([args.name, args.path])
-
 model_short_name = get_short_name(model_name)
 os.makedirs(f'../figs/{model_short_name}', exist_ok=True)
 
