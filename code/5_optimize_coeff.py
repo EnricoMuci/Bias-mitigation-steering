@@ -20,7 +20,7 @@ parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
 args = parser.parse_args()
 
-(model_name, model_path) = get_arguments([args.name, args.path])
+(model_name, model_path) = get_args([args.name, args.path])
 model_short_name = get_short_name(model_name)
 
 
