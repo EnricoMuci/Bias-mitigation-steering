@@ -10,7 +10,7 @@ from datasets import load_dataset
 from dialz import SteeringVector
 from utils import get_output
 from transformers import AutoTokenizer
-from utils_new import get_arguments, get_short_name, create_quantized_model
+from utils_new import *
 
 transformers.logging.set_verbosity_error()
 
