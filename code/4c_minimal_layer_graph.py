@@ -11,8 +11,8 @@ def create_minimal_age_layer_graph():
     Create a minimal version of the age layer graph with green vertical line at layer 13
     """
     # Load data
-    sep_data = pd.read_csv('../data/original/separability_scores/mistral/age_train+prompt.csv')
-    acc_data = pd.read_csv('../data/original/layer_scores/mistral/age_train+prompt.csv')
+    sep_data = pd.read_csv('../original/separability_scores/mistral/age_train+prompt.csv')
+    acc_data = pd.read_csv('../original/layer_scores/mistral/age_train+prompt.csv')
 
     # Create figure with clean minimal design
     fig, ax = plt.subplots(figsize=(7.2, 5.4))
