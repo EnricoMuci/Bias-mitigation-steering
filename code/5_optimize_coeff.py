@@ -5,11 +5,11 @@ import transformers
 import pandas as pd
 import numpy as np
 import argparse
+from tqdm import tqdm
 
 from datasets import load_dataset
 from dialz import SteeringVector
 from utils import get_output
-from transformers import AutoTokenizer
 from utils_new import *
 
 transformers.logging.set_verbosity_error()
@@ -20,12 +20,10 @@ parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
 args = parser.parse_args()
 
-(model_name, model_path) = get_args([args.name, args.path])
+(model_name, model_path) = old_get_args([args.name, args.path])
 model_short_name = get_short_name(model_name)
 
-
-tokenizer = AutoTokenizer.from_pretrained(model_path)
-tokenizer.pad_token_id = tokenizer.eos_token_id
+tokenizer = define_custom_tokenizer(model_name, model_path)
 
 print("\nLoading MMLU dataset...")
 mmlu = load_dataset("cais/mmlu", "all", split="test")
@@ -89,8 +87,7 @@ def predict_row(row, model, vector, coeff, task):
 
 def get_best_coeffs():
 
-    # Load the model once globally instead of multiple times inside the loop
-    model = create_quantized_model(model_name, model_path) # NEW
+    model = create_quantized_model(model_name, model_path)  # NEW: Load the model
 
     # top_files = ["top_train", "top_train+prompt"]
     top_files = ["top_layer_train", "top_layer_train+prompt"]
@@ -113,18 +110,34 @@ def get_best_coeffs():
             layer = row['max_layer']
             vector_type = row['vt']
 
-            try:
-                # Load in validation set
+            try:  # Load in validation set
                 validation_df = pd.read_csv(f"../data/bbq_validate/{axis}_validate.csv")
+                print(f"Running co-effs for {axis} on vector {vector_type} at {datetime.datetime.now()}")
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')  # steer
             except FileNotFoundError as e:
                 print(f"Missing axis: {axis} ({vector_type}).\nError: {e}")
                 continue
             
-            print(f"Running co-effs for {axis} on vector {vector_type} at {datetime.datetime.now()}")
+
             results = []
 
-            for coeff in np.arange(-2.0, 2.1, 0.2):
+            # NEW: Wrapping and unwrapping
+            layers = model_layer_list(model.model)
+            if hasattr(model, 'layer_ids'):
+                for old_id in model.layer_ids:
+                    old_layer = layers[old_id]
+                    # Remove wrapper for previous layer
+                    # if isinstance(old_layer, SteeringModule):
+                    if type(old_layer).__name__ == 'SteeringModule' or hasattr(old_layer, 'block'):
+                        layers[old_id] = old_layer.block  
+
+            model.layer_ids = [layer]
+
+            # if not isinstance(layers[layer], SteeringModule):
+            if type(layers[layer]).__name__ != 'SteeringModule':
+                layers[layer] = SteeringModule(layers[layer])
+
+            for coeff in tqdm(np.arange(-2.0, 2.1, 0.2), desc=f"Coeffs for {axis}"):
                 bbq_df = validation_df.copy()
                 mmlu_valid = mmlu_df.copy()
 
@@ -157,6 +170,7 @@ def get_best_coeffs():
                     'mmlu_accuracy': float(mmlu_accuracy),
 
                 })
+            # END for coefficients
 
             results_df = pd.DataFrame(results)
             

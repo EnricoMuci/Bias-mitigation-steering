@@ -4,9 +4,10 @@ import warnings
 
 from dialz import SteeringModel
 from dialz.vector import SteeringModule, model_layer_list
-from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
 
-def get_args(args):
+
+def old_get_args(args):
     model_name = args[0]
     model_path = args[1]
     return model_name, model_path
@@ -107,3 +108,12 @@ def create_quantized_model(model_name, model_path, layer_ids=None):
             model_name=model_name, quantization_config=bnb_config)
     except Exception as e:
         return SteeringModel(model_path, [5])  # Second element is arbritary as we're not generating yet
+
+
+def define_custom_tokenizer(model_name: str, model_path: str = None) -> AutoTokenizer:
+    if model_path is not None:  # custom tokenizer
+        tokenizer = AutoTokenizer.from_pretrained(model_path)  # Loaded model
+    else:
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer.pad_token_id = tokenizer.eos_token_id
+    return tokenizer
