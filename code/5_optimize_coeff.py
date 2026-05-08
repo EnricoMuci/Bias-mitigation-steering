@@ -118,8 +118,19 @@ def get_best_coeffs():
                 print(f"Missing axis: {axis} ({vector_type}).\nError: {e}")
                 continue
             
+            dir_path = f"../data/coeff_scores/{model_short_name}/{file}"
+            os.makedirs(dir_path, exist_ok=True)
+            save_file_path = os.path.join(dir_path, f"{axis}_{vector_type}.csv")
 
             results = []
+            completed_coeffs = set()
+
+            # Resume logic, to avoid previous coefficients
+            if os.path.exists(save_file_path):
+                print(f"Pre-calculated coefficients for {axis} found resuming...")
+                existing_df = pd.read_csv(save_file_path)
+                results = existing_df.to_dict('records')
+                completed_coeffs = set(existing_df['coeff'].round(1).values)
 
             # NEW: Wrapping and unwrapping
             layers = model_layer_list(model.model)
@@ -138,6 +149,10 @@ def get_best_coeffs():
                 layers[layer] = SteeringModule(layers[layer])
 
             for coeff in tqdm(np.arange(-2.0, 2.1, 0.2), desc=f"Coeffs for {axis}"):
+                # Avoid previously calculated coefficients
+                if round(coeff, 1) in completed_coeffs:
+                    continue
+
                 bbq_df = validation_df.copy()
                 mmlu_valid = mmlu_df.copy()
 
@@ -170,19 +185,15 @@ def get_best_coeffs():
                     'mmlu_accuracy': float(mmlu_accuracy),
 
                 })
+
+                # AUTOSAVE: the file is overwritten at every calculated coefficient
+                results_df = pd.DataFrame(results)
+                results_df['coeff'] = results_df['coeff'].round(1)
+                results_df['bbq_accuracy'] = results_df['bbq_accuracy'].round(3)
+                results_df['mmlu_accuracy'] = results_df['mmlu_accuracy'].round(3)
+                results_df.to_csv(save_file_path, index=False)
+                
             # END for coefficients
-
-            results_df = pd.DataFrame(results)
-            
-            # Format columns for saving
-            results_df['coeff'] = results_df['coeff'].round(1)
-            results_df['bbq_accuracy'] = results_df['bbq_accuracy'].round(3)
-            results_df['mmlu_accuracy'] = results_df['mmlu_accuracy'].round(3)
-
-            dir_path = f"../data/coeff_scores/{model_short_name}/{file}"
-            os.makedirs(dir_path, exist_ok=True)
-
-            results_df.to_csv(os.path.join(dir_path, f"{axis}_{vector_type}.csv"), index=False)
 
 
 get_best_coeffs()
