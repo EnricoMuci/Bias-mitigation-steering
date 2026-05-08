@@ -18,6 +18,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
+parser.add_argument('-c', '--colab', action='store_true')  # flag about colab simulation
 args = parser.parse_args()
 
 (model_name, model_path) = old_get_args([args.name, args.path])
@@ -117,18 +118,21 @@ def get_best_coeffs():
             except FileNotFoundError as e:
                 print(f"Missing axis: {axis} ({vector_type}).\nError: {e}")
                 continue
-            
-            dir_path = f"../data/coeff_scores/{model_short_name}/{file}"
-            os.makedirs(dir_path, exist_ok=True)
-            save_file_path = os.path.join(dir_path, f"{axis}_{vector_type}.csv")
+
+            csv_name = f"{axis}_{vector_type}.csv"
+
+            local_dir_path = f"../data/coeff_scores/{model_short_name}/{file}"
+            os.makedirs(local_dir_path, exist_ok=True)
+            local_file_path = os.path.join(local_dir_path, csv_name)
+
 
             results = []
             completed_coeffs = set()
 
             # Resume logic, to avoid previous coefficients
-            if os.path.exists(save_file_path):
+            if os.path.exists(local_file_path):
                 print(f"Pre-calculated coefficients for {axis} found resuming...")
-                existing_df = pd.read_csv(save_file_path)
+                existing_df = pd.read_csv(local_file_path)
                 results = existing_df.to_dict('records')
                 completed_coeffs = set(existing_df['coeff'].round(1).values)
 
@@ -191,7 +195,14 @@ def get_best_coeffs():
                 results_df['coeff'] = results_df['coeff'].round(1)
                 results_df['bbq_accuracy'] = results_df['bbq_accuracy'].round(3)
                 results_df['mmlu_accuracy'] = results_df['mmlu_accuracy'].round(3)
-                results_df.to_csv(save_file_path, index=False)
+
+                results_df.to_csv(local_file_path, index=False)
+
+                if args.colab:
+                    remote_dir_path = f"{REMOTE_DRIVE_DIR}/data/coeff_scores/{model_short_name}-reproduced/{file}"
+                    os.makedirs(remote_dir_path, exist_ok=True)
+                    remote_file_path = os.path.join(remote_dir_path, csv_name)
+                    results_df.to_csv(remote_file_path, index=False)
                 
             # END for coefficients
 
