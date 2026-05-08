@@ -5,9 +5,9 @@ from dialz import Dataset, SteeringVector
 
 from utils_new import create_quantized_model
 from utils import bbq_axes, load_and_tokenize_contrastive, contrastive_pairs
-from utils_new import get_arguments, get_short_name
+from utils_new import OLD_get_args, get_short_name
 
-(model_name, model_path) = get_arguments(sys.argv)
+(model_name, model_path) = OLD_get_args(sys.argv)
 model_short_name = get_short_name(model_name)
 
 dirs = {

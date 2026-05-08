@@ -5,12 +5,14 @@ import transformers
 import pandas as pd
 import numpy as np
 import argparse
+
+from dialz.vector import model_layer_list, SteeringModule
 from tqdm import tqdm
 
 from datasets import load_dataset
 from dialz import SteeringVector
 from utils import get_output
-from utils_new import *
+from utils_new import REMOTE_DRIVE_DIR, create_quantized_model, define_custom_tokenizer, get_short_name, new_get_args
 
 transformers.logging.set_verbosity_error()
 
@@ -21,7 +23,7 @@ parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes t
 parser.add_argument('-c', '--colab', action='store_true')  # flag about colab simulation
 args = parser.parse_args()
 
-(model_name, model_path) = old_get_args([args.name, args.path])
+(model_name, model_path) = new_get_args([args.name, args.path])
 model_short_name = get_short_name(model_name)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
@@ -125,16 +127,26 @@ def get_best_coeffs():
             os.makedirs(local_dir_path, exist_ok=True)
             local_file_path = os.path.join(local_dir_path, csv_name)
 
+            remote_dir_path = f"{REMOTE_DRIVE_DIR}/data/coeff_scores/{model_short_name}-reproduced/{file}"
+            os.makedirs(remote_dir_path, exist_ok=True)
+            remote_file_path = os.path.join(remote_dir_path, csv_name)
 
             results = []
             completed_coeffs = set()
 
             # Resume logic, to avoid previous coefficients
             if os.path.exists(local_file_path):
-                print(f"Pre-calculated coefficients for {axis} found resuming...")
                 existing_df = pd.read_csv(local_file_path)
                 results = existing_df.to_dict('records')
                 completed_coeffs = set(existing_df['coeff'].round(1).values)
+                print(f"Pre-calculated coefficients for {axis} found; resuming from {len(completed_coeffs)}...")
+            elif os.path.exists(remote_file_path):
+                existing_df = pd.read_csv(remote_file_path)
+                results = existing_df.to_dict('records')
+                completed_coeffs = set(existing_df['coeff'].round(1).values)
+                print(f"Pre-calculated coefficients for {axis} found; resuming from {len(completed_coeffs)}...")
+            else:
+                print(f'No pre-calculation for {axis}, starting...')
 
             # NEW: Wrapping and unwrapping
             layers = model_layer_list(model.model)
@@ -199,9 +211,6 @@ def get_best_coeffs():
                 results_df.to_csv(local_file_path, index=False)
 
                 if args.colab:
-                    remote_dir_path = f"{REMOTE_DRIVE_DIR}/data/coeff_scores/{model_short_name}-reproduced/{file}"
-                    os.makedirs(remote_dir_path, exist_ok=True)
-                    remote_file_path = os.path.join(remote_dir_path, csv_name)
                     results_df.to_csv(remote_file_path, index=False)
                 
             # END for coefficients

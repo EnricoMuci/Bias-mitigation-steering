@@ -8,12 +8,12 @@ from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
 
 REMOTE_DRIVE_DIR = '/content/drive/MyDrive/ThesisProject'
 
-def old_get_args(args):
+def new_get_args(args):
     model_name = args[0]
     model_path = args[1]
     return model_name, model_path
 
-def get_arguments(argv):
+def OLD_get_args(argv):
     # TODO: OLD
     if len(argv) > 2:  # Path and name
         model_name = argv[1]
