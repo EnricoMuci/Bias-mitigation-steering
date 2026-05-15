@@ -7,6 +7,7 @@ from dialz.vector import SteeringModule, model_layer_list
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
 
 REMOTE_DRIVE_DIR = '/content/drive/MyDrive/ThesisProject'
+EXPERIMENT = 'reproduced'
 
 def new_get_args(args):
     model_name = args[0]

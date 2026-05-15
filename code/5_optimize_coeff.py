@@ -12,7 +12,7 @@ from tqdm import tqdm
 from datasets import load_dataset
 from dialz import SteeringVector
 from utils import get_output
-from utils_new import REMOTE_DRIVE_DIR, create_quantized_model, define_custom_tokenizer, get_short_name, new_get_args
+from utils_new import REMOTE_DRIVE_DIR, EXPERIMENT, create_quantized_model, define_custom_tokenizer, get_short_name, new_get_args
 
 transformers.logging.set_verbosity_error()
 
@@ -95,11 +95,10 @@ def get_best_coeffs():
     # top_files = ["top_layer_train", "top_layer_train+prompt"]
 
     for file in top_files:
-        file_path = f"../data/layer_scores/{model_short_name}/best_layers/{file}.csv"
+        file_path = f"../data/layer_scores/{model_short_name}-{EXPERIMENT}/best_layers/{file}.csv"
         
         if not os.path.exists(file_path):
             # In best_layers there should be only
-            # top_layer_train.csv and top_layer_train+prompt.csv
             print(f"Missing the following file:\n{file_path}")
             continue
             
