@@ -136,12 +136,12 @@ def get_best_coeffs():
             if os.path.exists(local_file_path):
                 existing_df = pd.read_csv(local_file_path)
                 results = existing_df.to_dict('records')
-                completed_coeffs = set(existing_df['coeff'].round(1).values)
+                completed_coeffs = set(f"{c:.1f}" for c in existing_df['coeff'].values)
                 print(f"Pre-calculated coefficients for {axis} found; resuming from {len(completed_coeffs)}...")
             elif os.path.exists(remote_file_path):
                 existing_df = pd.read_csv(remote_file_path)
                 results = existing_df.to_dict('records')
-                completed_coeffs = set(existing_df['coeff'].round(1).values)
+                completed_coeffs = set(f"{c:.1f}" for c in existing_df['coeff'].values)
                 print(f"Pre-calculated coefficients for {axis} found; resuming from {len(completed_coeffs)}...")
             else:
                 print(f'No pre-calculation for {axis}, starting...')
@@ -162,9 +162,9 @@ def get_best_coeffs():
             if type(layers[layer]).__name__ != 'SteeringModule':
                 layers[layer] = SteeringModule(layers[layer])
 
-            for coeff in tqdm(np.arange(-2.0, 2.1, 0.2), desc=f"Coeffs for {axis}"):
+            for coeff in tqdm(np.linspace(-2.0, 2.0, 21), desc=f"Coeffs for {axis}"):
                 # Avoid previously calculated coefficients
-                if round(coeff-1, 1) in completed_coeffs:
+                if f"{coeff:.1f}" in completed_coeffs:
                     continue
 
                 bbq_df = validation_df.copy()
