@@ -19,7 +19,6 @@ transformers.logging.set_verbosity_error()
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
-parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
 parser.add_argument('-c', '--colab', action='store_true')  # flag about colab simulation
 args = parser.parse_args()
 
@@ -92,8 +91,8 @@ def get_best_coeffs():
 
     model = create_quantized_model(model_name, model_path)  # NEW: Load the model
 
-    # top_files = ["top_train", "top_train+prompt"]
-    top_files = ["top_layer_train", "top_layer_train+prompt"]
+    top_files = ["top_train", "top_train+prompt"]
+    # top_files = ["top_layer_train", "top_layer_train+prompt"]
 
     for file in top_files:
         file_path = f"../data/layer_scores/{model_short_name}/best_layers/{file}.csv"
