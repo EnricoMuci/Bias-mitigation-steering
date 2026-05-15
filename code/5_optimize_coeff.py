@@ -164,7 +164,7 @@ def get_best_coeffs():
 
             for coeff in tqdm(np.arange(-2.0, 2.1, 0.2), desc=f"Coeffs for {axis}"):
                 # Avoid previously calculated coefficients
-                if round(coeff, 1) in completed_coeffs:
+                if round(coeff-1, 1) in completed_coeffs:
                     continue
 
                 bbq_df = validation_df.copy()
