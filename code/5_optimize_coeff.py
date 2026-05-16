@@ -7,7 +7,7 @@ import numpy as np
 import argparse
 
 from dialz.vector import model_layer_list, SteeringModule
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from datasets import load_dataset
 from dialz import SteeringVector
@@ -86,6 +86,11 @@ def predict_row(row, model, vector, coeff, task):
         "correct":     correct
     })
 
+def save_results(results_df, local_file_path, remote_file_path):
+    """Save results to local path, and to Drive if on Colab."""
+    results_df.to_csv(local_file_path, index=False)
+    if args.colab:
+        results_df.to_csv(remote_file_path, index=False)
 
 def get_best_coeffs():
 
@@ -107,6 +112,7 @@ def get_best_coeffs():
         print(f"Processing {file}")
 
         for _, row in best_layers.iterrows():
+            # each axis is a bias variable, with its own best layer index (max. accuracy and separability)
             axis = row['axis']
             layer = row['max_layer']
             vector_type = row['vt']
@@ -119,32 +125,37 @@ def get_best_coeffs():
                 print(f"Missing axis: {axis} ({vector_type}).\nError: {e}")
                 continue
 
+            # Save paths
             csv_name = f"{axis}_{vector_type}.csv"
 
             local_dir_path = f"../data/coeff_scores/{model_short_name}/{file}"
             os.makedirs(local_dir_path, exist_ok=True)
             local_file_path = os.path.join(local_dir_path, csv_name)
 
-            remote_dir_path = f"{REMOTE_DRIVE_DIR}/data/coeff_scores/{model_short_name}-reproduced/{file}"
-            os.makedirs(remote_dir_path, exist_ok=True)
-            remote_file_path = os.path.join(remote_dir_path, csv_name)
+            if args.colab: # In Colab, it creates the remote file path to manage session aborts
+                remote_dir_path = f"{REMOTE_DRIVE_DIR}/data/coeff_scores/{model_short_name}-reproduced/{file}"
+                os.makedirs(remote_dir_path, exist_ok=True)
+                remote_file_path = os.path.join(remote_dir_path, csv_name)
+            else:  # No Google Drive
+                remote_file_path = ''
 
             results = []
             completed_coeffs = set()
 
             # Resume logic, to avoid previous coefficients
-            if os.path.exists(local_file_path):
-                existing_df = pd.read_csv(local_file_path)
-                results = existing_df.to_dict('records')
-                completed_coeffs = set(f"{c:.1f}" for c in existing_df['coeff'].values)
-                print(f"Pre-calculated coefficients for {axis} found; resuming from {len(completed_coeffs)}...")
-            elif os.path.exists(remote_file_path):
+            existing_df = None
+            if args.colab and remote_file_path and os.path.exists(remote_file_path):
                 existing_df = pd.read_csv(remote_file_path)
+                print(f"Resuming {axis} from Drive ({len(existing_df)} coefficients already done).")
+            elif os.path.exists(local_file_path):
+                existing_df = pd.read_csv(local_file_path)
+                print(f"Resuming {axis} from local file ({len(existing_df)} coefficients already done).")
+            else:
+                print(f"No pre-calculation for {axis}, starting from scratch.")
+
+            if existing_df is not None:
                 results = existing_df.to_dict('records')
                 completed_coeffs = set(f"{c:.1f}" for c in existing_df['coeff'].values)
-                print(f"Pre-calculated coefficients for {axis} found; resuming from {len(completed_coeffs)}...")
-            else:
-                print(f'No pre-calculation for {axis}, starting...')
 
             # NEW: Wrapping and unwrapping
             layers = model_layer_list(model.model)
@@ -164,54 +175,61 @@ def get_best_coeffs():
 
             for coeff in tqdm(np.linspace(-2.0, 2.0, 21), desc=f"Coeffs for {axis}"):
                 # Avoid previously calculated coefficients
-                if f"{coeff:.1f}" in completed_coeffs:
+                coeff_key = f"{coeff:.1f}"
+                if coeff_key in completed_coeffs:
                     continue
 
-                bbq_df = validation_df.copy()
-                mmlu_valid = mmlu_df.copy()
+                try:
+                    bbq_df = validation_df.copy()
+                    mmlu_valid = mmlu_df.copy()
 
-                # apply the predictor to every row
-                bbq_df[['ans', 'prediction', 'correct']] = bbq_df.apply(
-                    predict_row,
-                    axis=1,
-                    args=(model, vector, coeff, 'bbq')
-                )
+                    # apply the predictor to every row
+                    bbq_df[['ans', 'prediction', 'correct']] = bbq_df.apply(
+                        predict_row,
+                        axis=1,
+                        args=(model, vector, coeff, 'bbq')
+                    )
 
-                # if your true labels live in column "label", you can now compute accuracy:
-                bbq_correct = (bbq_df["prediction"] == bbq_df["label"]).sum()
-                bbq_accuracy = bbq_correct / len(bbq_df)
+                    # if your true labels live in column "label", you can now compute accuracy:
+                    bbq_correct = (bbq_df["prediction"] == bbq_df["label"]).sum()
+                    bbq_accuracy = bbq_correct / len(bbq_df)
 
-                mmlu_valid[['ans', 'prediction', 'correct']] = mmlu_valid.apply(
-                    predict_row,
-                    axis=1,
-                    args=(model, vector, coeff, 'mmlu')
-                )
+                    mmlu_valid[['ans', 'prediction', 'correct']] = mmlu_valid.apply(
+                        predict_row,
+                        axis=1,
+                        args=(model, vector, coeff, 'mmlu')
+                    )
 
-                # compute accuracy
-                mmlu_correct = (mmlu_valid["prediction"] == mmlu_valid["answer"]).sum()
-                mmlu_accuracy = mmlu_correct / len(mmlu_valid)
+                    # compute accuracy
+                    mmlu_correct = (mmlu_valid["prediction"] == mmlu_valid["answer"]).sum()
+                    mmlu_accuracy = mmlu_correct / len(mmlu_valid)
 
-                results.append({
-                    'coeff': coeff,
-                    'bbq_correct': int(bbq_correct),
-                    'mmlu_correct': float(mmlu_correct),
-                    'bbq_accuracy': float(bbq_accuracy),
-                    'mmlu_accuracy': float(mmlu_accuracy),
+                    results.append({
+                        'coeff': round(coeff, 1),
+                        'bbq_correct': bbq_correct,
+                        'mmlu_correct': mmlu_correct,
+                        'bbq_accuracy': round(bbq_accuracy, 3),
+                        'mmlu_accuracy': round(mmlu_accuracy, 3),
+                    })
+                    completed_coeffs.add(coeff_key) # NEW from 5AA
 
-                })
+                    # AUTOSAVE: the file is overwritten at every calculated coefficient
+                    results_df = pd.DataFrame(results)
+                    save_results(results_df, local_file_path, remote_file_path)
 
-                # AUTOSAVE: the file is overwritten at every calculated coefficient
+                except Exception as err:
+                    # Log and continue: do NOT let a single coeff crash the whole run
+                    print(f"[ERROR] axis={axis}, coeff={coeff_key}: {err}")
+                    continue
+            # for coefficients
+
+            # Final explicit save after completing all coefficients for this axis
+            if results:
                 results_df = pd.DataFrame(results)
-                results_df['coeff'] = results_df['coeff'].round(1)
-                results_df['bbq_accuracy'] = results_df['bbq_accuracy'].round(3)
-                results_df['mmlu_accuracy'] = results_df['mmlu_accuracy'].round(3)
-
-                results_df.to_csv(local_file_path, index=False)
-
-                if args.colab:
-                    results_df.to_csv(remote_file_path, index=False)
-                
-            # END for coefficients
+                save_results(results_df, local_file_path, remote_file_path)
+                print(f"Completed {axis}: {len(results)} coefficients saved.")
+        # for axes (files in /bbq_validate, rows in /best_layers)
+    # for files
 
 
 get_best_coeffs()

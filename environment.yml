@@ -22,3 +22,4 @@ dependencies:
     - transformers
     - bitsandbytes
     - accelerate
+  - tqdm
