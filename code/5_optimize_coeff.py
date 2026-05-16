@@ -10,8 +10,10 @@ from tqdm.auto import tqdm
 
 from datasets import load_dataset
 from dialz import SteeringVector
+
+
 from utils import get_output
-from utils_new import REMOTE_DRIVE_DIR, create_quantized_model, define_custom_tokenizer, get_short_name, new_get_args
+from utils_new import REMOTE_DRIVE_DIR, create_quantized_model, define_custom_tokenizer, get_short_name, new_get_args #, EXPERIMENT
 
 transformers.logging.set_verbosity_error()
 
@@ -28,6 +30,7 @@ tokenizer = define_custom_tokenizer(model_name, model_path)
 
 local_best_layers_dir = f'../data/layer_scores/{model_short_name}/best_layers'
 local_bbq_validate_dir = f"../data/bbq_validate"  # 1 file per axis
+local_coeff_scores_dir = f'../data/coeff_scores/{model_short_name}'
 
 
 def check_paths():
@@ -36,12 +39,18 @@ def check_paths():
         checked += 1
     else:
         print(f'Missing this path:\n{local_best_layers_dir}')
+
     if os.path.exists(local_bbq_validate_dir):
         checked += 1
     else:
         print(f'Missing this path:\n{local_bbq_validate_dir}')
 
-    if checked >= 2:
+    if os.path.exists(local_coeff_scores_dir):
+        checked += 1
+    else:
+        print(f'Missing this path:\n{local_coeff_scores_dir}')
+
+    if checked >= 3:
         return True
     else:
         return False
@@ -153,7 +162,7 @@ def get_best_coeffs():
             # Save paths
             csv_name = f"{axis}_{top_vt_csv}.csv"
 
-            local_file_path = f"../data/coeff_scores/{model_short_name}/{top_vt_csv}"
+            local_file_path = f"{local_coeff_scores_dir}/{top_vt_csv}"
             os.makedirs(local_file_path, exist_ok=True)
             local_file_path = os.path.join(local_file_path, csv_name)
 
