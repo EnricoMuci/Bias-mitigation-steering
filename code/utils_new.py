@@ -6,7 +6,7 @@ from dialz import SteeringModel
 from dialz.vector import SteeringModule, model_layer_list
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
 
-REMOTE_DRIVE_DIR = '/content/drive/MyDrive/ThesisProject'
+REMOTE_DRIVE_THESIS_PROJECT = '/content/drive/MyDrive/ThesisProject'
 EXPERIMENT = 'reproduced'  # or 'original
 
 

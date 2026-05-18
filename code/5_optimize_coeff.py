@@ -5,15 +5,13 @@ import pandas as pd
 import numpy as np
 import argparse
 
-from dialz.vector import model_layer_list, SteeringModule
 from tqdm.auto import tqdm
 
 from datasets import load_dataset
 from dialz import SteeringVector
 
-
-from utils import get_output
-from utils_new import REMOTE_DRIVE_DIR, create_quantized_model, define_custom_tokenizer, get_model_short_name, new_get_args #, EXPERIMENT
+from utils import get_output#, bbq_axes
+from utils_new import *
 
 transformers.logging.set_verbosity_error()
 
@@ -31,7 +29,20 @@ tokenizer = define_custom_tokenizer(model_name, model_path)
 LOCAL_BEST_LAYERS_DIR = f'../data/layer_scores/{model_short_name}/best_layers'
 LOCAL_BBQ_VALIDATE_DIR = f"../data/bbq_validate"  # 1 file per axis
 LOCAL_COEFF_SCORES_DIR = f'../data/coeff_scores/{model_short_name}'
-VECTOR_TYPES = ["top_train", "top_train+prompt"]
+TOP_VECTOR_TYPES = ["top_train", "top_train+prompt"]
+
+
+def resume_logic(axis, remote_file_path, local_file_path):
+    existing_csv = None
+    if args.colab and os.path.exists(remote_file_path):
+        existing_csv = pd.read_csv(remote_file_path)
+        print(f"Resuming {axis} from Drive ({len(existing_csv)} coefficients already done).")
+    elif os.path.exists(local_file_path):
+        existing_csv = pd.read_csv(local_file_path)
+        print(f"Resuming {axis} from local top_vt_csv ({len(existing_csv)} coefficients already done).")
+    else:
+        print(f"No pre-calculation for {axis}, starting from scratch.")
+    return existing_csv
 
 
 def check_paths():
@@ -51,16 +62,24 @@ def check_paths():
 
     if os.path.exists(LOCAL_COEFF_SCORES_DIR):
         checked += 1
-        for vt in VECTOR_TYPES:
-            os.makedirs(os.path.join(LOCAL_COEFF_SCORES_DIR, vt), exist_ok=True)
+        for vtf in TOP_VECTOR_TYPES:
+            print(f'Creating this directory: {LOCAL_COEFF_SCORES_DIR}/{vtf}/')
+            os.makedirs(os.path.join(LOCAL_COEFF_SCORES_DIR, vtf), exist_ok=True)
     else:
         print(f'Missing this path:\n{LOCAL_COEFF_SCORES_DIR}')
+
+    print('\n\nSTART SIMULATION FOR RESUME LOGIC')
+    resume_logic(
+        axis='age',
+        remote_file_path=f'{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/{model_short_name}-{EXPERIMENT}/top_train',
+        local_file_path=f'{LOCAL_COEFF_SCORES_DIR}/top_train'
+    )
+    print('END SIMULATION FOR RESUME LOGIC\n\n')
 
     if checked >= 3:
         return True
     else:
         return False
-
 
 def prepare_MMLU():
     print("\nLoading MMLU dataset...")
@@ -134,42 +153,44 @@ def save_results(results_df, local_file_path, remote_file_path):
 def get_best_coeffs(mmlu_df=None):
     model = create_quantized_model(model_name, model_path)  # NEW: Load the model
 
-    for top_vt_csv in VECTOR_TYPES:
-        file_path = f"{LOCAL_BEST_LAYERS_DIR}/{top_vt_csv}.csv"
+    for top_vt in TOP_VECTOR_TYPES:  # 'top_train' 'top_train+prompt'
+        top_best_vt_file = f"{LOCAL_BEST_LAYERS_DIR}/{top_vt}.csv"
 
-        if not os.path.exists(file_path):
+        if not os.path.exists(top_best_vt_file):
             # In best_layers there should be only
-            print(f"Missing the following top_vt_csv:\n{file_path}")
+            print(f"Missing the following top file in best_layers directory:\n{top_best_vt_file}.csv. "
+                  f"Next iteration...")
             continue
 
-        best_layers = pd.read_csv(file_path)
+        best_layers = pd.read_csv(top_best_vt_file)
         print(best_layers.head())
-        print(f"Processing {top_vt_csv}")
+        print(f"Processing {top_vt}.csv")
 
-        for _, row in best_layers.iterrows():
+        for _, row in best_layers.iterrows():  # for each discrimination-axis
             # each axis is a bias variable, with its own best layer index (max. accuracy and separability)
             axis = row['axis']
             layer = row['max_layer']
-            top_vt_csv = row['vt']
+            vt = row['vt']  # 'train' or 'train+prompt'
 
             try:  # Load in validation set
                 validation_df = pd.read_csv(f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_validate.csv")
-                print(f"Running co-effs for {axis} on vector {top_vt_csv} at {datetime.datetime.now()}")
-                vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{top_vt_csv}/{axis}.gguf')  # steer
+                print(f"Running co-effs for {axis} on vector {vt} at {datetime.datetime.now()}")
+                vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vt}/{axis}.gguf')  # steer
             except FileNotFoundError as e:
-                print(f"Missing file in BBQ Validate for this axis (and type): {axis} ({top_vt_csv}).\n"
+                print(f"Missing file in BBQ Validate (or in /vectors/) for this axis (and type): {axis} ({vt}).\n"
                       f"Error: {e}")
                 continue
 
             # Save paths
-            csv_name = f"{axis}_{top_vt_csv}.csv"
+            csv_name = f"{axis}_{vt}.csv"
 
-            local_file_path = f"{LOCAL_COEFF_SCORES_DIR}/{top_vt_csv}"
-            os.makedirs(local_file_path, exist_ok=True)
-            local_file_path = os.path.join(local_file_path, csv_name)
+            local_dir_path = f"{LOCAL_COEFF_SCORES_DIR}/{top_vt}"  # 'top_train/' or 'top_train+prompt/'
+            os.makedirs(local_dir_path, exist_ok=True)
+            local_file_path = os.path.join(local_dir_path, csv_name)
 
-            if args.colab:  # In Colab, it creates the remote top_vt_csv path to manage session aborts
-                remote_dir_path = f"{REMOTE_DRIVE_DIR}/data/coeff_scores/{model_short_name}-reproduced/{top_vt_csv}"
+            if args.colab:  # In Colab, it creates the remote vt path to manage session aborts
+                remote_dir_path = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/"
+                                   f"{model_short_name}-{EXPERIMENT}/{top_vt}")
                 os.makedirs(remote_dir_path, exist_ok=True)
                 remote_file_path = os.path.join(remote_dir_path, csv_name)
             else:  # No Google Drive
@@ -179,15 +200,8 @@ def get_best_coeffs(mmlu_df=None):
             completed_coeffs = set()
 
             # Resume logic, to avoid previous coefficients
-            existing_csv = None
-            if args.colab and remote_file_path and os.path.exists(remote_file_path):
-                existing_csv = pd.read_csv(remote_file_path)
-                print(f"Resuming {axis} from Drive ({len(existing_csv)} coefficients already done).")
-            elif os.path.exists(local_file_path):
-                existing_csv = pd.read_csv(local_file_path)
-                print(f"Resuming {axis} from local top_vt_csv ({len(existing_csv)} coefficients already done).")
-            else:
-                print(f"No pre-calculation for {axis}, starting from scratch.")
+            # TODO
+            existing_csv = resume_logic(axis, remote_file_path, local_file_path)
 
             if existing_csv is not None:
                 results = existing_csv.to_dict('records')
@@ -249,7 +263,7 @@ def get_best_coeffs(mmlu_df=None):
                     })
                     completed_coeffs.add(coeff_key)  # NEW from 5AA
 
-                    # AUTOSAVE: the top_vt_csv is overwritten at every calculated coefficient
+                    # AUTOSAVE: the vt is overwritten at every calculated coefficient
                     results_df = pd.DataFrame(results)
                     save_results(results_df, local_file_path, remote_file_path)
 
@@ -265,7 +279,7 @@ def get_best_coeffs(mmlu_df=None):
                 save_results(results_df, local_file_path, remote_file_path)
                 print(f"Completed {axis}: {len(results)} coefficients saved.")
         # for axes (files in /bbq_validate, rows in /best_layers)
-    # for files (subdir → train, train+prompt)
+    # for vector-type files (train, train+prompt)
 
 
 if __name__ == "__main__":

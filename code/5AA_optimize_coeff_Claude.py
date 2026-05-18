@@ -12,7 +12,7 @@ from tqdm import tqdm
 from datasets import load_dataset
 from dialz import SteeringVector
 from utils import get_output
-from utils_new import REMOTE_DRIVE_DIR, create_quantized_model, define_custom_tokenizer, get_model_short_name, new_get_args
+from utils_new import REMOTE_DRIVE_THESIS_PROJECT, create_quantized_model, define_custom_tokenizer, get_model_short_name, new_get_args
 
 transformers.logging.set_verbosity_error()
 
@@ -128,7 +128,7 @@ def get_best_coeffs():
 
             # FIX: remote dir creation only when on Colab
             if args.colab:
-                remote_dir_path = f"{REMOTE_DRIVE_DIR}/data/coeff_scores/{model_short_name}-reproduced/{file}"
+                remote_dir_path = f"{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/{model_short_name}-reproduced/{file}"
                 os.makedirs(remote_dir_path, exist_ok=True)
                 remote_file_path = os.path.join(remote_dir_path, csv_name)
             else:
