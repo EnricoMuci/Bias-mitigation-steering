@@ -200,7 +200,6 @@ def get_best_coeffs(mmlu_df=None):
             completed_coeffs = set()
 
             # Resume logic, to avoid previous coefficients
-            # TODO
             existing_csv = resume_logic(axis, remote_file_path, local_file_path)
 
             if existing_csv is not None:
