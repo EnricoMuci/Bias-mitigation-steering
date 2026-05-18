@@ -81,6 +81,7 @@ def check_paths():
     # )
     # print('END SIMULATION FOR RESUME LOGIC\n\n')
 
+    print(f'Checked = {checked}')
     if checked >= 3:
         return True
     else:
@@ -290,3 +291,5 @@ if __name__ == "__main__":
     if check_paths():
         print('All path correctly checked :)')
         get_best_coeffs(prepare_MMLU())
+    else:
+        print('Something wrong :(')
