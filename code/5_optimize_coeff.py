@@ -66,15 +66,16 @@ def check_paths():
             print(f'Creating this directory: {LOCAL_COEFF_SCORES_DIR}/{vtf}/')
             os.makedirs(os.path.join(LOCAL_COEFF_SCORES_DIR, vtf), exist_ok=True)
     else:
-        print(f'Missing this path:\n{LOCAL_COEFF_SCORES_DIR}')
+        os.makedirs(LOCAL_COEFF_SCORES_DIR, exist_ok=True)
+        print(f'Missing this path:\n{LOCAL_COEFF_SCORES_DIR}. Just created')
 
-    print('\n\nSTART SIMULATION FOR RESUME LOGIC')
-    resume_logic(
-        axis='age',
-        remote_file_path=f'{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/{model_short_name}-{EXPERIMENT}/top_train/age_train.csv',
-        local_file_path=f'{LOCAL_COEFF_SCORES_DIR}/top_train/age_train.csv'
-    )
-    print('END SIMULATION FOR RESUME LOGIC\n\n')
+    # print('\n\nSTART SIMULATION FOR RESUME LOGIC')
+    # resume_logic(
+    #     axis='age',
+    #     remote_file_path=f'{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/{model_short_name}-{EXPERIMENT}/top_train/age_train.csv',
+    #     local_file_path=f'{LOCAL_COEFF_SCORES_DIR}/top_train/age_train.csv'
+    # )
+    # print('END SIMULATION FOR RESUME LOGIC\n\n')
 
     if checked >= 3:
         return True
