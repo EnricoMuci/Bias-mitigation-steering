@@ -66,8 +66,12 @@ def check_paths():
             print(f'Creating this directory: {LOCAL_COEFF_SCORES_DIR}/{vtf}/')
             os.makedirs(os.path.join(LOCAL_COEFF_SCORES_DIR, vtf), exist_ok=True)
     else:
-        os.makedirs(LOCAL_COEFF_SCORES_DIR, exist_ok=True)
-        print(f'Missing this path:\n{LOCAL_COEFF_SCORES_DIR}. Just created')
+        try:
+            os.makedirs(LOCAL_COEFF_SCORES_DIR, exist_ok=True)
+            print(f'Missing this path:\n{LOCAL_COEFF_SCORES_DIR}. Just created')
+            checked += 1
+        except Exception as err:
+            print(f'Missing this path:\n{LOCAL_COEFF_SCORES_DIR}. ERROR: {err}')
 
     # print('\n\nSTART SIMULATION FOR RESUME LOGIC')
     # resume_logic(
