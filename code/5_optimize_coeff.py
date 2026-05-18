@@ -71,8 +71,8 @@ def check_paths():
     print('\n\nSTART SIMULATION FOR RESUME LOGIC')
     resume_logic(
         axis='age',
-        remote_file_path=f'{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/{model_short_name}-{EXPERIMENT}/top_train',
-        local_file_path=f'{LOCAL_COEFF_SCORES_DIR}/top_train'
+        remote_file_path=f'{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/{model_short_name}-{EXPERIMENT}/top_train/age_train.csv',
+        local_file_path=f'{LOCAL_COEFF_SCORES_DIR}/top_train/age_train.csv'
     )
     print('END SIMULATION FOR RESUME LOGIC\n\n')
 
