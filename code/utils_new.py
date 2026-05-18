@@ -7,12 +7,14 @@ from dialz.vector import SteeringModule, model_layer_list
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
 
 REMOTE_DRIVE_DIR = '/content/drive/MyDrive/ThesisProject'
-EXPERIMENT = 'reproduced'
+EXPERIMENT = 'reproduced'  # or 'original
 
-def new_get_args(args):
-    model_name = args[0]
-    model_path = args[1]
+
+def new_get_args(args_list: list):
+    model_name = args_list[0]
+    model_path = args_list[1]
     return model_name, model_path
+
 
 def OLD_get_args(argv):
     # TODO: OLD
@@ -27,7 +29,7 @@ def OLD_get_args(argv):
         raise ValueError("Model name and model path must be provided as command-line arguments.")
 
 
-def get_short_name(model_name):
+def get_model_short_name(model_name):
     # Map model names to short names
     model_short_names = {
         "Qwen/Qwen2.5-7B-Instruct": "qwen",

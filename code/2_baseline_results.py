@@ -1,51 +1,40 @@
+import argparse
 import os
-import sys
 import datetime
-import torch
 import pandas as pd
-
 from utils import bbq_axes, get_output
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig  #FIXME
 from dotenv import load_dotenv
+# import torch
+# import sys
+# from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig  # FIXME
+from utils_new import get_model_short_name, new_get_args, define_custom_tokenizer, create_quantized_model
 
 load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
 print(datetime.datetime.now())
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
+parser.add_argument('-p', '--path', type=str, default=None)  # model path
+args = parser.parse_args()
 
-if len(sys.argv) > 2:
-    model_name = sys.argv[1] #"mistralai/Mistral-7B-Instruct-v0.1" 
-    model_path = sys.argv[2] #FIXME
-else:
-    raise ValueError("Model name must be provided as a command-line argument.")
+(model_name, model_path) = new_get_args([args.name, args.path])
+model_short_name = get_model_short_name(model_name)
 
-# Map model names to short names
-model_short_names = {
-    "Qwen/Qwen2.5-7B-Instruct": "qwen",
-    "meta-llama/Llama-3.1-8B-Instruct": "llama",
-    "mistralai/Mistral-7B-Instruct-v0.1": "mistral",
-}
+tokenizer = define_custom_tokenizer(model_name, model_path)
 
-model_short_name = model_short_names.get(model_name)
-if not model_short_name:
-    raise ValueError(f"Unknown model name: {model_name}")
-
-# Load LLM
-tokenizer = AutoTokenizer.from_pretrained(model_path) # model_name
-tokenizer.pad_token_id = tokenizer.eos_token_id
-
-
-quantization_config = BitsAndBytesConfig(  # FIXME: new
-    load_in_4bit=True,
-    bnb_4bit_compute_dtype=torch.float16,
-    llm_int8_enable_fp32_cpu_offload=True
-)
-model = AutoModelForCausalLM.from_pretrained(
-    model_path,  # FIXME: model_name,
-    device_map="auto",
-    quantization_config=quantization_config
-)
-
+# TODO: PREVIOUS QUANTIZATION
+# quantization_config = BitsAndBytesConfig(  # FIXME: new
+#     load_in_4bit=True,
+#     bnb_4bit_compute_dtype=torch.float16,
+#     llm_int8_enable_fp32_cpu_offload=True
+# )
+# model = AutoModelForCausalLM.from_pretrained(
+#     model_path,  # FIXME: model_name,
+#     device_map="auto",
+#     quantization_config=quantization_config
+# )
+model = create_quantized_model(model_name, model_path)
 
 ## Get baseline first
 def process_row(row):
@@ -87,7 +76,7 @@ def process_row(row):
     })
 
 
-# Main exec
+# MAIN Execution (start)
 
 all_dfs = []
 

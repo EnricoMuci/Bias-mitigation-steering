@@ -36,11 +36,10 @@ else:
 
 
 (model_name, model_path) = new_get_args([args.name, args.path])
-model_short_name = get_short_name(model_name)
+model_short_name = get_model_short_name(model_name)
 os.makedirs(f'../figs/{model_short_name}', exist_ok=True)
 
-tokenizer = AutoTokenizer.from_pretrained(model_path)
-tokenizer.pad_token_id = tokenizer.eos_token_id
+tokenizer = define_custom_tokenizer(model_name, model_path)
 
 
 def batched_get_hiddens(

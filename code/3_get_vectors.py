@@ -57,13 +57,14 @@ for axis in bbq_axes:
 
     ## Generated Dataset (using Dialz and sentence-starters)
     train_dataset = Dataset.create_dataset(
-        model_name, contrastive_pairs[axis], system_role=" ",
-                                           prompt_type="sentence-starters")
+        model_name, contrastive_pairs[axis], system_role=" ", prompt_type="sentence-starters"
+    )
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(dirs['generate_ss'], f"{axis}.gguf"))
 
     ## Generated Dataset (using Dialz and question-answer)
-    train_dataset = Dataset.create_dataset(model_name, contrastive_pairs[axis], system_role=" ",
-                                           prompt_type="question-answer")
+    train_dataset = Dataset.create_dataset(
+        model_name, contrastive_pairs[axis], system_role=" ", prompt_type="question-answer"
+    )
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(dirs['generate_qa'], f"{axis}.gguf"))

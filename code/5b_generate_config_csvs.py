@@ -4,7 +4,7 @@ import glob
 
 import argparse
 
-from utils_new import new_get_args, get_short_name
+from utils_new import new_get_args, get_model_short_name
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
@@ -13,7 +13,7 @@ parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes t
 args = parser.parse_args()
 
 (model_name, model_path) = new_get_args([args.name, args.path])
-model_short_name = get_short_name(model_name)
+model_short_name = get_model_short_name(model_name)
 
 
 def generate_config_csvs():

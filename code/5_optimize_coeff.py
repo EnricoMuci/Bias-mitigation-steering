@@ -13,7 +13,7 @@ from dialz import SteeringVector
 
 
 from utils import get_output
-from utils_new import REMOTE_DRIVE_DIR, create_quantized_model, define_custom_tokenizer, get_short_name, new_get_args #, EXPERIMENT
+from utils_new import REMOTE_DRIVE_DIR, create_quantized_model, define_custom_tokenizer, get_model_short_name, new_get_args #, EXPERIMENT
 
 transformers.logging.set_verbosity_error()
 
@@ -24,31 +24,37 @@ parser.add_argument('-c', '--colab', action='store_true')  # flag about remote s
 args = parser.parse_args()
 
 (model_name, model_path) = new_get_args([args.name, args.path])
-model_short_name = get_short_name(model_name)
+model_short_name = get_model_short_name(model_name)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
 
-local_best_layers_dir = f'../data/layer_scores/{model_short_name}/best_layers'
-local_bbq_validate_dir = f"../data/bbq_validate"  # 1 file per axis
-local_coeff_scores_dir = f'../data/coeff_scores/{model_short_name}'
+LOCAL_BEST_LAYERS_DIR = f'../data/layer_scores/{model_short_name}/best_layers'
+LOCAL_BBQ_VALIDATE_DIR = f"../data/bbq_validate"  # 1 file per axis
+LOCAL_COEFF_SCORES_DIR = f'../data/coeff_scores/{model_short_name}'
+VECTOR_TYPES = ["top_train", "top_train+prompt"]
 
 
 def check_paths():
+    """
+    Path checking
+    """
     checked = 0
-    if os.path.exists(local_best_layers_dir):
+    if os.path.exists(LOCAL_BEST_LAYERS_DIR):
         checked += 1
     else:
-        print(f'Missing this path:\n{local_best_layers_dir}')
+        print(f'Missing this path:\n{LOCAL_BEST_LAYERS_DIR}')
 
-    if os.path.exists(local_bbq_validate_dir):
+    if os.path.exists(LOCAL_BBQ_VALIDATE_DIR):
         checked += 1
     else:
-        print(f'Missing this path:\n{local_bbq_validate_dir}')
+        print(f'Missing this path:\n{LOCAL_BBQ_VALIDATE_DIR}')
 
-    if os.path.exists(local_coeff_scores_dir):
+    if os.path.exists(LOCAL_COEFF_SCORES_DIR):
         checked += 1
+        for vt in VECTOR_TYPES:
+            os.makedirs(os.path.join(LOCAL_COEFF_SCORES_DIR, vt), exist_ok=True)
     else:
-        print(f'Missing this path:\n{local_coeff_scores_dir}')
+        print(f'Missing this path:\n{LOCAL_COEFF_SCORES_DIR}')
 
     if checked >= 3:
         return True
@@ -56,16 +62,17 @@ def check_paths():
         return False
 
 
-# MMLU Preparation
-print("\nLoading MMLU dataset...")
-mmlu = load_dataset("cais/mmlu", "all", split="test")
-print("\nProcessing MMLU dataset...")
-full_df = pd.DataFrame(mmlu)
+def prepare_MMLU():
+    print("\nLoading MMLU dataset...")
+    mmlu = load_dataset("cais/mmlu", "all", split="test")
+    print("\nProcessing MMLU dataset...")
+    full_df = pd.DataFrame(mmlu)
 
-# Get an equal sample from all subjects up to roughly 1000 questions
-mmlu_df = full_df.groupby('subject').sample(n=1000 // full_df['subject'].nunique(), random_state=42).reset_index(
-    drop=True)
-print(len(mmlu_df))
+    # Get an equal sample from all subjects up to roughly 1000 questions
+    mmlu_df = full_df.groupby('subject').sample(n=1000 // full_df['subject'].nunique(), random_state=42).reset_index(
+        drop=True)
+    print(len(mmlu_df))
+    return mmlu_df
 
 
 def predict_row(row, model, vector, coeff, task):
@@ -124,16 +131,11 @@ def save_results(results_df, local_file_path, remote_file_path):
         results_df.to_csv(remote_file_path, index=False)
 
 
-def get_best_coeffs():
-    """
-    """
+def get_best_coeffs(mmlu_df=None):
     model = create_quantized_model(model_name, model_path)  # NEW: Load the model
 
-    vector_types = ["top_train", "top_train+prompt"]
-    # vector_types = ["top_layer_train", "top_layer_train+prompt"]
-
-    for top_vt_csv in vector_types:
-        file_path = f"{local_best_layers_dir}/{top_vt_csv}.csv"
+    for top_vt_csv in VECTOR_TYPES:
+        file_path = f"{LOCAL_BEST_LAYERS_DIR}/{top_vt_csv}.csv"
 
         if not os.path.exists(file_path):
             # In best_layers there should be only
@@ -151,7 +153,7 @@ def get_best_coeffs():
             top_vt_csv = row['vt']
 
             try:  # Load in validation set
-                validation_df = pd.read_csv(f"{local_bbq_validate_dir}/{axis}_validate.csv")
+                validation_df = pd.read_csv(f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_validate.csv")
                 print(f"Running co-effs for {axis} on vector {top_vt_csv} at {datetime.datetime.now()}")
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{top_vt_csv}/{axis}.gguf')  # steer
             except FileNotFoundError as e:
@@ -162,7 +164,7 @@ def get_best_coeffs():
             # Save paths
             csv_name = f"{axis}_{top_vt_csv}.csv"
 
-            local_file_path = f"{local_coeff_scores_dir}/{top_vt_csv}"
+            local_file_path = f"{LOCAL_COEFF_SCORES_DIR}/{top_vt_csv}"
             os.makedirs(local_file_path, exist_ok=True)
             local_file_path = os.path.join(local_file_path, csv_name)
 
@@ -263,10 +265,10 @@ def get_best_coeffs():
                 save_results(results_df, local_file_path, remote_file_path)
                 print(f"Completed {axis}: {len(results)} coefficients saved.")
         # for axes (files in /bbq_validate, rows in /best_layers)
-    # for files (train, train+prompt
+    # for files (subdir → train, train+prompt)
 
 
 if __name__ == "__main__":
     if check_paths():
         print('All path correctly checked :)')
-        get_best_coeffs()
+        get_best_coeffs(prepare_MMLU())
