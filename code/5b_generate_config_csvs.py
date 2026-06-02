@@ -1,25 +1,24 @@
 import pandas as pd
 import os
 import glob
+from tqdm import tqdm
 
 import argparse
 
 from utils import bbq_axes
-from utils_new import new_get_args, get_model_short_name #, VECTOR_TYPES #, EXPERIMENT
+from utils_new import new_get_args, get_model_short_name, EXPERIMENT, REMOTE_DRIVE_THESIS_PROJECT
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
+parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
 args = parser.parse_args()
 
 (model_name, model_path) = new_get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 
-if args.axes is not None:
-    axes = args.axes.copy()  # list type
-else:
-    axes = bbq_axes
+drive_config_dir = f'{REMOTE_DRIVE_THESIS_PROJECT}/data/configs/'
 
 
 def generate_config_csvs():
@@ -27,8 +26,9 @@ def generate_config_csvs():
 
     # Define all axes
     # axes = ['age', 'appearance', 'disability', 'gender', 'nationality', 'race', 'religion', 'socioeconomic']
+    axes = [bbq_axes[0], bbq_axes[1]]
 
-    # Get all folders in coeff_scores/mistral (copied into colab)
+    # Get all folders in coeff_scores/mistral
     top_VT_folders = [d for d in os.listdir(f'../data/coeff_scores/{model_short_name}') if
                os.path.isdir(os.path.join(f'../data/coeff_scores/{model_short_name}', d))]
     top_VT_folders.sort()
@@ -36,29 +36,31 @@ def generate_config_csvs():
     # Create configs directory if it doesn't exist
     os.makedirs('../data/configs', exist_ok=True)
 
-    for top_vt in top_VT_folders:
+    for top_vt in tqdm(top_VT_folders, desc="Vector types"):
 
         print(f"Processing folder: {top_vt}")
 
         config_data = []
 
-        for axis in axes:
+        for axis in tqdm(
+                axes,
+                desc=f"{top_vt}",
+                leave=False):
             # Load the corresponding best layers file
             best_layers_file = f"../data/layer_scores/{model_short_name}/best_layers/{top_vt}.csv"
             if os.path.exists(best_layers_file):
                 best_layers_df = pd.read_csv(best_layers_file)
-
                 # Find the row for this axis
                 axis_row = best_layers_df[best_layers_df['axis'] == axis]  # best layer for that axis
                 if not axis_row.empty:
                     layer = axis_row.iloc[0]['max_layer']
-                    top_vt = axis_row.iloc[0]['vt']
+                    vector_type = axis_row.iloc[0]['vt']
                 else:
                     layer = None
-                    top_vt = None
+                    vector_type = None
             else:
                 layer = None
-                top_vt = None
+                vector_type = None
 
             # Find CSV files for this axis in this folder
             csv_pattern = f"../data/coeff_scores/{model_short_name}/{top_vt}/{axis}_*.csv"
@@ -74,7 +76,7 @@ def generate_config_csvs():
 
                     config_data.append({
                         'axis': axis,
-                        'vector_type': top_vt,
+                        'vector_type': vector_type,
                         'layer': layer,
                         'coeff': max_bbq_row['coeff'],
                         'bbq_accuracy': max_bbq_row['bbq_accuracy'],
