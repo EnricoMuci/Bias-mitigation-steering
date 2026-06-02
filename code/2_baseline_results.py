@@ -23,17 +23,6 @@ model_short_name = get_model_short_name(model_name)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
 
-# TODO: PREVIOUS QUANTIZATION
-# quantization_config = BitsAndBytesConfig(  # FIXME: new
-#     load_in_4bit=True,
-#     bnb_4bit_compute_dtype=torch.float16,
-#     llm_int8_enable_fp32_cpu_offload=True
-# )
-# model = AutoModelForCausalLM.from_pretrained(
-#     model_path,  # FIXME: model_name,
-#     device_map="auto",
-#     quantization_config=quantization_config
-# )
 model = create_quantized_model(model_name, model_path)
 
 ## Get baseline first

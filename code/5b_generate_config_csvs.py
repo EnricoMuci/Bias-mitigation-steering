@@ -1,12 +1,10 @@
 import pandas as pd
 import os
 import glob
-from tqdm import tqdm
 
 import argparse
-
 from utils import bbq_axes
-from utils_new import new_get_args, get_model_short_name, EXPERIMENT, REMOTE_DRIVE_THESIS_PROJECT
+from utils_new import new_get_args, get_model_short_name
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
@@ -22,35 +20,32 @@ if args.axes is not None:
 else:
     axes = bbq_axes
 
-
 def generate_config_csvs():
     """Generate config CSV files for each folder with best results per axis."""
 
+    # Define all axes
+    # axes = ['age', 'appearance', 'disability', 'gender', 'nationality', 'race', 'religion', 'socioeconomic']
+
     # Get all folders in coeff_scores/mistral
-    top_VT_folders = [d for d in os.listdir(f'../data/coeff_scores/{model_short_name}') if
+    top_VT_dirs = [d for d in os.listdir(f'../data/coeff_scores/{model_short_name}') if
                os.path.isdir(os.path.join(f'../data/coeff_scores/{model_short_name}', d))]
-    top_VT_folders.sort()
+    top_VT_dirs.sort()
 
     # Create configs directory if it doesn't exist
     os.makedirs('../data/configs', exist_ok=True)
 
-    for top_vt in tqdm(top_VT_folders, desc="Vector types"):
-
+    for top_vt in top_VT_dirs:
         print(f"Processing folder: {top_vt}")
 
         config_data = []
 
-        print(f'\nAxes: {axes}\n')
-        for axis in tqdm(
-                axes,
-                desc=f"{top_vt}",
-                leave=False):
+        for axis in axes:
             # Load the corresponding best layers file
-            best_layers_file = f"../data/layer_scores/{model_short_name}/best_layers/{top_vt}.csv"
+            best_layers_file = f"../data/layer_scores/mistral/best_layers/{top_vt}.csv"
             if os.path.exists(best_layers_file):
                 best_layers_df = pd.read_csv(best_layers_file)
                 # Find the row for this axis
-                axis_row = best_layers_df[best_layers_df['axis'] == axis]  # best layer for that axis
+                axis_row = best_layers_df[best_layers_df['axis'] == axis]
                 if not axis_row.empty:
                     layer = axis_row.iloc[0]['max_layer']
                     vector_type = axis_row.iloc[0]['vt']
@@ -62,7 +57,7 @@ def generate_config_csvs():
                 vector_type = None
 
             # Find CSV files for this axis in this folder
-            csv_pattern = f"../data/coeff_scores/{model_short_name}/{top_vt}/{axis}_*.csv"
+            csv_pattern = f"../data/coeff_scores/mistral/{top_vt}/{axis}_*.csv"
             csv_files = glob.glob(csv_pattern)
 
             if csv_files and layer is not None:
