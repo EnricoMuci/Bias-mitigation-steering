@@ -15,16 +15,16 @@ args = parser.parse_args()
 (model_name, model_path) = new_get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 
-if args.axes is not None:
-    axes = args.axes.copy()  # list type
-else:
-    axes = bbq_axes
 
 def generate_config_csvs():
     """Generate config CSV files for each folder with best results per axis."""
 
     # Define all axes
     # axes = ['age', 'appearance', 'disability', 'gender', 'nationality', 'race', 'religion', 'socioeconomic']
+    if args.axes is not None:
+        axes = args.axes.copy()  # list type
+    else:
+        axes = bbq_axes # all BBQ  axes from utils
 
     # Get all folders in coeff_scores/mistral
     top_VT_dirs = [d for d in os.listdir(f'../data/coeff_scores/{model_short_name}') if

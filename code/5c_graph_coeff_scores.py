@@ -12,8 +12,18 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 import matplotlib
+
+from utils_new import choose_axes
+
 matplotlib.use('Agg')  # Use non-interactive backend
 
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
+parser.add_argument('-p', '--path', type=str, default=None)  # model path
+parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
+args = parser.parse_args()
 
 def load_coeff_scores(axis, vector_type='train+prompt', model='mistral'):
     """Load coefficient scores for a specific axis."""
@@ -171,8 +181,8 @@ def create_averaged_coeff_graph():
     print("Creating averaged coefficient graph across all axes...")
     
     # Define bias axes
-    axes = ['age', 'appearance', 'disability', 'gender', 
-            'nationality', 'race', 'religion', 'socioeconomic']
+    # axes = ['age', 'appearance', 'disability', 'gender', 'nationality', 'race', 'religion', 'socioeconomic']
+    axes = choose_axes(args.axes)
     
     # Load all data and calculate averages
     all_bbq_data = []
@@ -239,8 +249,10 @@ def generate_coeff_visualizations():
     """Generate coefficient score visualizations for all bias axes."""
     
     # Define bias axes
-    axes = ['age', 'appearance', 'disability', 'gender', 
-            'nationality', 'race', 'religion', 'socioeconomic']
+    # axes = ['age', 'appearance', 'disability', 'gender',
+    #         'nationality', 'race', 'religion', 'socioeconomic']
+    axes = choose_axes(args.axes)
+
     
     # Create output directory
     os.makedirs("../figs/coeffs", exist_ok=True)
