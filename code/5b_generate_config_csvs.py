@@ -12,21 +12,19 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
-parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
 args = parser.parse_args()
 
 (model_name, model_path) = new_get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 
-drive_config_dir = f'{REMOTE_DRIVE_THESIS_PROJECT}/data/configs/'
+if args.axes is not None:
+    axes = args.axes.copy()  # list type
+else:
+    axes = bbq_axes
 
 
 def generate_config_csvs():
     """Generate config CSV files for each folder with best results per axis."""
-
-    # Define all axes
-    # axes = ['age', 'appearance', 'disability', 'gender', 'nationality', 'race', 'religion', 'socioeconomic']
-    axes = [bbq_axes[0], bbq_axes[1]]
 
     # Get all folders in coeff_scores/mistral
     top_VT_folders = [d for d in os.listdir(f'../data/coeff_scores/{model_short_name}') if
@@ -42,6 +40,7 @@ def generate_config_csvs():
 
         config_data = []
 
+        print(f'\nAxes: {axes}\n')
         for axis in tqdm(
                 axes,
                 desc=f"{top_vt}",
