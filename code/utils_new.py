@@ -8,7 +8,7 @@ from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
 
 REMOTE_DRIVE_THESIS_PROJECT = '/content/drive/MyDrive/ThesisProject'
 EXPERIMENT = 'reproduced'  # or 'original
-
+VECTOR_TYPES = ['train', 'train+prompt']
 
 def new_get_args(args_list: list):
     model_name = args_list[0]

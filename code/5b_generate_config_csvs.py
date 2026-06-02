@@ -4,7 +4,8 @@ import glob
 
 import argparse
 
-from utils_new import new_get_args, get_model_short_name
+from utils import bbq_axes
+from utils_new import new_get_args, get_model_short_name #, VECTOR_TYPES #, EXPERIMENT
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
@@ -15,45 +16,52 @@ args = parser.parse_args()
 (model_name, model_path) = new_get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 
+if args.axes is not None:
+    axes = args.axes.copy()  # list type
+else:
+    axes = bbq_axes
+
 
 def generate_config_csvs():
     """Generate config CSV files for each folder with best results per axis."""
 
     # Define all axes
-    axes = ['age', 'appearance', 'disability', 'gender', 'nationality', 'race', 'religion', 'socioeconomic']
+    # axes = ['age', 'appearance', 'disability', 'gender', 'nationality', 'race', 'religion', 'socioeconomic']
 
-    # Get all folders in coeff_scores/mistral
-    folders = [d for d in os.listdir(f'../data/coeff_scores/{model_short_name}') if
+    # Get all folders in coeff_scores/mistral (copied into colab)
+    top_VT_folders = [d for d in os.listdir(f'../data/coeff_scores/{model_short_name}') if
                os.path.isdir(os.path.join(f'../data/coeff_scores/{model_short_name}', d))]
-    folders.sort()
+    top_VT_folders.sort()
 
     # Create configs directory if it doesn't exist
     os.makedirs('../data/configs', exist_ok=True)
 
-    for folder in folders:
-        print(f"Processing folder: {folder}")
+    for top_vt in top_VT_folders:
+
+        print(f"Processing folder: {top_vt}")
 
         config_data = []
 
         for axis in axes:
             # Load the corresponding best layers file
-            best_layers_file = f"../data/layer_scores/{model_short_name}/best_layers/{folder}.csv"
+            best_layers_file = f"../data/layer_scores/{model_short_name}/best_layers/{top_vt}.csv"
             if os.path.exists(best_layers_file):
                 best_layers_df = pd.read_csv(best_layers_file)
+
                 # Find the row for this axis
-                axis_row = best_layers_df[best_layers_df['axis'] == axis]  # best layer for that stereotype
+                axis_row = best_layers_df[best_layers_df['axis'] == axis]  # best layer for that axis
                 if not axis_row.empty:
                     layer = axis_row.iloc[0]['max_layer']
-                    vector_type = axis_row.iloc[0]['vt']
+                    top_vt = axis_row.iloc[0]['vt']
                 else:
                     layer = None
-                    vector_type = None
+                    top_vt = None
             else:
                 layer = None
-                vector_type = None
+                top_vt = None
 
             # Find CSV files for this axis in this folder
-            csv_pattern = f"../data/coeff_scores/{model_short_name}/{folder}/{axis}_*.csv"
+            csv_pattern = f"../data/coeff_scores/{model_short_name}/{top_vt}/{axis}_*.csv"
             csv_files = glob.glob(csv_pattern)
 
             if csv_files and layer is not None:
@@ -66,7 +74,7 @@ def generate_config_csvs():
 
                     config_data.append({
                         'axis': axis,
-                        'vector_type': vector_type,
+                        'vector_type': top_vt,
                         'layer': layer,
                         'coeff': max_bbq_row['coeff'],
                         'bbq_accuracy': max_bbq_row['bbq_accuracy'],
@@ -76,11 +84,11 @@ def generate_config_csvs():
         # Save config CSV for this folder
         if config_data:
             config_df = pd.DataFrame(config_data)
-            config_file = f"../data/configs/{folder}.csv"
+            config_file = f"../data/configs/{top_vt}.csv"
             config_df.to_csv(config_file, index=False)
             print(f"  Saved {len(config_data)} configs to {config_file}")
         else:
-            print(f"  No data found for folder {folder}")
+            print(f"  No data found for folder {top_vt}")
 
 
 if __name__ == "__main__":
