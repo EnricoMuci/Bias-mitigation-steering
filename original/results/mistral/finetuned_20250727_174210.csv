@@ -1,0 +1,9 @@
+axis,vector_type,layer,coeff,model_type,bbq_test_accuracy,bbq_s_dis,bbq_s_amb,mmlu_test_accuracy,mmlu_total_questions,mmlu_correct_answers,stereoset_ss_score,stereoset_lm_score,stereoset_icat_score,crows_bias_score,crows_stereo_bias_score,crows_antistereo_bias_score,clear_bias_clearbias_score,stereoset_skipped,clear_bias_skipped
+gender,finetuned,15,0.0,finetuned,0.595,0.343,0.088,0.273,969,265,59.356,89.336,72.619,0.569,0.604,0.515,0.633,,
+race,finetuned,15,0.0,finetuned,0.598,0.213,0.087,0.273,969,265,60.526,91.125,71.941,0.669,0.672,0.628,0.805,,
+religion,finetuned,15,0.0,finetuned,0.673,0.414,0.141,0.273,969,265,50.955,95.541,93.716,0.752,0.747,0.833,0.712,,
+age,finetuned,15,0.0,finetuned,0.565,-0.159,-0.066,0.273,969,265,,,,0.713,0.712,0.714,0.829,True,
+nationality,finetuned,15,0.0,finetuned,0.63,0.31,0.111,0.273,969,265,,,,0.686,0.682,0.727,,True,True
+socioeconomic,finetuned,15,0.0,finetuned,0.59,0.268,0.13,0.273,969,265,,,,0.674,0.701,0.4,0.721,True,
+appearance,finetuned,15,0.0,finetuned,0.512,-0.187,-0.085,0.273,969,265,,,,0.746,0.769,0.636,,True,True
+disability,finetuned,15,0.0,finetuned,0.505,-0.262,-0.124,0.273,969,265,,,,0.867,0.877,0.667,0.54,True,

@@ -1,0 +1,9 @@
+axis,vector_type,layer,coeff,bbq_accuracy,mmlu_accuracy,fairness_prompt,bbq_test_accuracy,bbq_s_dis,bbq_s_amb,mmlu_test_accuracy,mmlu_total_questions,mmlu_correct_answers,stereoset_skipped,crows_bias_score,crows_stereo_bias_score,crows_antistereo_bias_score,clear_bias_clearbias_score,clear_bias_skipped,stereoset_ss_score,stereoset_lm_score,stereoset_icat_score
+age,train+prompt,14,0,0.63,0.451,True,0.558,0.046,0.024,0.344,969,333,True,0.655,0.685,0.5,0.757,,,,
+appearance,train+prompt,13,0,0.6,0.478,True,0.618,0.225,0.08,0.344,969,333,True,0.714,0.731,0.636,,True,,,
+disability,train+prompt,14,0,0.643,0.452,True,0.61,0.489,0.214,0.344,969,333,True,0.9,0.912,0.667,0.669,,,,
+gender,train+prompt,13,0,0.517,0.452,True,0.563,0.071,0.023,0.344,969,333,,0.687,0.755,0.583,0.767,,69.416,89.537,54.767
+nationality,train+prompt,13,0,0.557,0.465,True,0.62,0.721,0.302,0.344,969,333,True,0.648,0.649,0.636,,True,,,
+race,train+prompt,14,0,0.623,0.462,True,0.622,0.37,0.148,0.344,969,333,,0.684,0.696,0.558,0.824,,63.829,90.609,65.549
+religion,train+prompt,13,0,0.67,0.473,True,0.657,0.427,0.163,0.344,969,333,,0.781,0.798,0.5,0.682,,56.051,92.994,81.74
+socioeconomic,train+prompt,13,0,0.777,0.442,True,0.638,0.257,0.098,0.344,969,333,True,0.727,0.764,0.333,0.721,,,,

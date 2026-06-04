@@ -1,10 +1,12 @@
-import sys  
+import argparse
+import sys
 import os
 import pandas as pd
 import logging
 from datetime import datetime
 from dialz import SteeringModel, SteeringVector
-from transformers import AutoTokenizer
+
+from utils_new import new_get_args, get_model_short_name, define_custom_tokenizer
 
 # Import functions from the individual evaluation files  
 # Note: Using importlib because Python module names can't start with numbers
@@ -20,25 +22,17 @@ clear_bias_eval = import_module('10_clear_bias_evaluation')
 USE_FAIRNESS_PROMPT = False  # Set to True to enable fairness prompting
 USE_SELF_DEBIAS = True    # Set to True to enable self-debiasing
 
-if len(sys.argv) > 1:
-    model_name = sys.argv[1]
-else:
-    raise ValueError("Model name must be provided as a command-line argument.")
+# ARGUMENTS
+parser = argparse.ArgumentParser()
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
+parser.add_argument('-p', '--path', type=str, default=None)  # model path
+parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
+args = parser.parse_args()
 
-model_short_names = {
-    "Qwen/Qwen2.5-7B-Instruct": "qwen",
-    "meta-llama/Llama-3.1-8B-Instruct": "llama",
-    "mistralai/Mistral-7B-Instruct-v0.1": "mistral",
-}
+(model_name, model_path) = new_get_args([args.name, args.path])
+model_short_name = get_model_short_name(model_name)
 
-model_short_name = model_short_names.get(model_name)
-if not model_short_name:
-    raise ValueError(f"Unknown model name: {model_name}")
-
-# Initialize tokenizer
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-tokenizer.pad_token_id = tokenizer.eos_token_id
-
+tokenizer = define_custom_tokenizer(model_name, model_path)
 
 def run_evaluations_for_config(config_file):
     """Run all evaluations for a given config file by calling functions from individual files."""

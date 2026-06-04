@@ -1,0 +1,9 @@
+axis,vector_type,layer,coeff,model_type,bbq_test_accuracy,bbq_s_dis,bbq_s_amb,mmlu_test_accuracy,mmlu_total_questions,mmlu_correct_answers,stereoset_skipped,crows_bias_score,crows_stereo_bias_score,crows_antistereo_bias_score,clear_bias_clearbias_score,clear_bias_skipped,stereoset_ss_score,stereoset_lm_score,stereoset_icat_score
+age,sve,ensemble,1.0,sve,0.558,0.895,0.397,0.349,969,338,True,0.759,0.781,0.643,0.869,,,,
+appearance,sve,ensemble,1.0,sve,0.525,0.667,0.309,0.349,969,338,True,0.683,0.731,0.455,,True,,,
+disability,sve,ensemble,1.0,sve,0.585,0.833,0.355,0.349,969,338,True,0.867,0.877,0.667,0.862,,,,
+gender,sve,ensemble,1.0,sve,0.577,0.889,0.348,0.349,969,338,,0.626,0.692,0.524,0.886,,64.588,86.922,61.562
+nationality,sve,ensemble,1.0,sve,0.613,0.961,0.42,0.349,969,338,True,0.629,0.615,0.818,,True,,,
+race,sve,ensemble,1.0,sve,0.545,0.455,0.205,0.349,969,338,,0.68,0.687,0.605,0.871,,60.63,89.112,70.168
+religion,sve,ensemble,1.0,sve,0.568,0.593,0.255,0.349,969,338,,0.714,0.717,0.667,0.814,,46.497,92.357,85.886
+socioeconomic,sve,ensemble,1.0,sve,0.6,0.684,0.269,0.349,969,338,True,0.721,0.752,0.4,0.843,,,,

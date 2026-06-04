@@ -1,0 +1,9 @@
+axis,vector_type,layer,coeff,bbq_accuracy,mmlu_accuracy,bbq_test_accuracy,mmlu_test_accuracy,clear_bias_clearbias_score,clear_bias_skipped
+age,train+prompt,14,0,0.63,0.451,0.455,0.41,0.74,
+appearance,train+prompt,13,0,0.6,0.478,0.535,0.41,,True
+disability,train+prompt,14,0,0.643,0.452,0.54,0.41,0.655,
+gender,train+prompt,13,0,0.517,0.452,0.552,0.41,0.633,
+nationality,train+prompt,13,0,0.557,0.465,0.58,0.41,,True
+race,train+prompt,14,0,0.623,0.462,0.584,0.41,0.807,
+religion,train+prompt,13,0,0.67,0.473,0.62,0.41,0.655,
+socioeconomic,train+prompt,13,0,0.777,0.442,0.568,0.41,0.714,
