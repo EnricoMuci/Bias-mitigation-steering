@@ -1,4 +1,5 @@
 import pandas as pd
+from tqdm import tqdm
 from utils import get_output, get_selfdebias_output, calculate_disambig_bias_score, calculate_ambig_bias_score
 
 # Tokenizer will be passed as parameter to avoid circular import
@@ -60,8 +61,11 @@ def run_bbq_evaluation(model, vector, coeff, axis, tokenizer, use_fairness_promp
     # Load test data
     test_df = pd.read_csv(f"../data/bbq_test/{axis}_test.csv")  # stereotype
     
+    # Inizializza TQDM per Pandas (position=1 la mette sotto la barra principale, leave=False la fa sparire quando finisce)
+    tqdm.pandas(desc=f"BBQ {axis}", position=1, leave=False)
+    
     # Apply predictions
-    test_df[['ans', 'prediction', 'correct']] = test_df.apply(
+    test_df[['ans', 'prediction', 'correct']] = test_df.progress_apply(
         predict_bbq_row, axis=1, args=(model, vector, coeff, tokenizer, use_fairness_prompt, use_self_debias)
     )
     
@@ -83,5 +87,3 @@ def run_bbq_evaluation(model, vector, coeff, axis, tokenizer, use_fairness_promp
         's_dis': s_dis,
         's_amb': s_amb
     }
-
-

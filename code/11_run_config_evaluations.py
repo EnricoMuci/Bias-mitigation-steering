@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import logging
 from datetime import datetime
+from tqdm import tqdm
 from dialz import SteeringModel, SteeringVector
 
 from utils_new import new_get_args, get_model_short_name, define_custom_tokenizer
@@ -45,7 +46,8 @@ def run_evaluations_for_config(config_file):
     
     results = []
     
-    for _, config_row in config_df.iterrows():
+    # Aggiunto TQDM per monitorare il ciclo principale delle configurazioni (position=0 per tenerlo in alto)
+    for _, config_row in tqdm(config_df.iterrows(), total=len(config_df), desc="Total Configs Progress", position=0):
         axis = config_row['axis']
         vector_type = config_row['vector_type']
         layer = int(config_row['layer'])
@@ -166,10 +168,15 @@ def setup_logging():
     # Redirect print statements to logging
     class PrintToLog:
         def write(self, text):
-            if text.strip():  # Only log non-empty lines
+            # TQDM usa '\r' per aggiornare la barra sulla stessa riga. 
+            # Le stampiamo a schermo (sys.__stderr__) ma non le salviamo nel file log!
+            if '\r' in text:
+                sys.__stderr__.write(text)
+                sys.__stderr__.flush()
+            elif text.strip():  # Only log non-empty lines
                 logging.info(text.strip())
         def flush(self):
-            pass
+            sys.__stderr__.flush()
     
     sys.stdout = PrintToLog()
     sys.stderr = PrintToLog()
