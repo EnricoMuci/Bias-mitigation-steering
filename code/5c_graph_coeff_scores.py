@@ -25,6 +25,7 @@ parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
 args = parser.parse_args()
 
+
 def load_coeff_scores(axis, vector_type='train+prompt', model='mistral'):
     """Load coefficient scores for a specific axis."""
     file_path = f"../data/coeff_scores/{model}/top_{vector_type}/{axis}_{vector_type}.csv"

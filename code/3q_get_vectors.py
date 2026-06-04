@@ -1,10 +1,10 @@
 import argparse
 import os
 import datetime
-from dialz import Dataset, SteeringVector
+from dialz import SteeringVector
 
 from utils_new import create_quantized_model
-from utils import bbq_axes, load_and_tokenize_contrastive, contrastive_pairs
+from utils import bbq_axes, load_and_tokenize_contrastive
 from utils_new import new_get_args, get_model_short_name
 
 parser = argparse.ArgumentParser()
@@ -18,8 +18,6 @@ model_short_name = get_model_short_name(model_name)
 VECTOR_DIRS = {
     "train": f"../vectors/{model_short_name}/train",
     "train+prompt": f"../vectors/{model_short_name}/train+prompt",
-    "generate_ss": f"../vectors/{model_short_name}/generate_ss",
-    "generate_qa": f"../vectors/{model_short_name}/generate_qa",
 }
 
 for d in VECTOR_DIRS.values():
@@ -42,16 +40,3 @@ for axis in bbq_axes:
                                                   prompt=f"Consider the bias related to {axis} in the following. ")
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(VECTOR_DIRS['train+prompt'], f"{axis}.gguf"))
-    
-    if contrastive_pairs is not None:
-        ## Generated Dataset (using Dialz and sentence-starters)
-        train_dataset = Dataset.create_dataset(
-            model_name, contrastive_pairs[axis], system_role=" ", prompt_type="sentence-starters"
-        )
-        vector = SteeringVector.train(model, train_dataset)
-        vector.export_gguf(os.path.join(VECTOR_DIRS['generate_ss'], f"{axis}.gguf"))
-
-        ## Generated Dataset (using Dialz and question-answer)
-        train_dataset = Dataset.create_dataset(model_name, contrastive_pairs[axis], system_role=" ", prompt_type="question-answer")
-        vector = SteeringVector.train(model, train_dataset)
-        vector.export_gguf(os.path.join(VECTOR_DIRS['generate_qa'], f"{axis}.gguf"))

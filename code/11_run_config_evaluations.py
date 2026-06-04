@@ -1,6 +1,5 @@
 import sys  
 import os
-import glob
 import pandas as pd
 import logging
 from datetime import datetime
@@ -51,6 +50,15 @@ def run_evaluations_for_config(config_file):
     config_df = pd.read_csv(config_file)
     print(f"Loaded {len(config_df)} configurations")
     
+    # Controlla se esistono già dei risultati per riprendere da dove si era interrotto
+    results_file = f"../results/{model_short_name}/{config_name}.csv"
+    existing_axes = set()
+    if os.path.exists(results_file):
+        existing_df = pd.read_csv(results_file)
+        if 'axis' in existing_df.columns:
+            existing_axes = set(existing_df['axis'].tolist())
+            print(f"Found {len(existing_axes)} previously evaluated axes: {', '.join(existing_axes)}")
+
     results = []
     
     for _, config_row in config_df.iterrows():
@@ -62,11 +70,21 @@ def run_evaluations_for_config(config_file):
         mmlu_accuracy = config_row['mmlu_accuracy']
         
         print(f"\n  Processing {axis} (layer={layer}, coeff={coeff})...")
+
+        if axis in existing_axes:
+            print(f"    Skipping {axis}: Already evaluated in previous run.")
+            continue
         
+        # Check if vector file exists before proceeding
+        vector_path = f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf'
+        if not os.path.exists(vector_path):
+            print(f"    Skipping {axis}: Vector file not found at {vector_path}")
+            continue
+            
         # Load model and vector for this configuration
         model = SteeringModel(model_name, [layer])
         model.half()
-        vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
+        vector = SteeringVector.import_gguf(vector_path)
         
         # Initialize result row with config data
         result_row = {
@@ -135,14 +153,20 @@ def run_evaluations_for_config(config_file):
         results.append(result_row)
     
     # Save results to CSV
-    results_df = pd.DataFrame(results)
-    os.makedirs(f"../results/{model_short_name}", exist_ok=True)
-    results_file = f"../results/{model_short_name}/{config_name}.csv"
-    results_df.to_csv(results_file, index=False)
-    
-    print(f"\nAll evaluations complete for config: {config_name}")
-    print(f"Results saved to {results_file}")
-    print(f"Saved {len(results)} rows with {len(results_df.columns)} columns")
+    if results:
+        results_df = pd.DataFrame(results)
+        # Unisce i risultati a quelli precedenti se si stava riprendendo
+        if os.path.exists(results_file):
+            results_df = pd.concat([existing_df, results_df], ignore_index=True)
+            
+        os.makedirs(f"../results/{model_short_name}", exist_ok=True)
+        results_df.to_csv(results_file, index=False)
+        
+        print(f"\nAll evaluations complete for config: {config_name}")
+        print(f"Results saved to {results_file}")
+        print(f"Saved {len(results)} new rows (total {len(results_df)} rows)")
+    else:
+        print(f"\nNo new evaluations were performed for config: {config_name}")
 
 
 def setup_logging():

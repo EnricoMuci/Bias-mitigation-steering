@@ -4,7 +4,6 @@ from utils import get_output, get_selfdebias_output, calculate_disambig_bias_sco
 # Tokenizer will be passed as parameter to avoid circular import
 
 
-
 def predict_bbq_row(row, model, vector, coeff, tokenizer, use_fairness_prompt=False, use_self_debias=False):
     """Predict on a single BBQ row."""
     context = row["context"]

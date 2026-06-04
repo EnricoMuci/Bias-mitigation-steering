@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 from datasets import load_dataset
 from dialz import SteeringVector
 
-from utils import get_output#, bbq_axes
+from utils import get_output
 from utils_new import *
 
 transformers.logging.set_verbosity_error()
@@ -73,19 +73,13 @@ def check_paths():
         except Exception as err:
             print(f'Missing this path:\n{LOCAL_COEFF_SCORES_DIR}. ERROR: {err}')
 
-    # print('\n\nSTART SIMULATION FOR RESUME LOGIC')
-    # resume_logic(
-    #     axis='age',
-    #     remote_file_path=f'{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/{model_short_name}-{EXPERIMENT}/top_train/age_train.csv',
-    #     local_file_path=f'{LOCAL_COEFF_SCORES_DIR}/top_train/age_train.csv'
-    # )
-    # print('END SIMULATION FOR RESUME LOGIC\n\n')
 
-    print(f'Checked = {checked}')
+    # print(f'Checked = {checked}')
     if checked >= 3:
         return True
     else:
         return False
+
 
 def prepare_MMLU():
     print("\nLoading MMLU dataset...")
