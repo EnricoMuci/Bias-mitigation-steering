@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import shutil
 
 from dialz import SteeringVector
 from sklearn.decomposition import PCA
@@ -16,7 +17,7 @@ from sklearn.model_selection import cross_val_score
 
 from utils import load_and_tokenize_contrastive, get_output, bbq_axes
 from utils_new import *
-from transformers import AutoTokenizer, AutoConfig
+from transformers import AutoConfig
 
 transformers.logging.set_verbosity_error()
 
@@ -25,7 +26,7 @@ parser.add_argument('-m', '--mode', type=str, default='full')  # set at the end 
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
-parser.add_argument('-t', '--type', type=int, default=2)  # type for get_acc_change_per_layer
+parser.add_argument('-t', '--type', type=int, default=2)  # train[+prompt] → get_acc_change_per_layer
 args = parser.parse_args()
 
 
@@ -268,11 +269,42 @@ def get_acc_change_per_layer():
 
         # for each of our vectors
         for vector_type in set_types:  # ["train", "train+prompt"]:
-            print(f"Processing layers for {axis} on vector {vector_type} at ")
+            output_file = f"../data/layer_scores/{model_short_name}/{axis}_{vector_type}.csv"
+            remote_file = f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/{model_short_name}-{EXPERIMENT}/{axis}_{vector_type}.csv"
+            start_layer = 1
             results = []
+            
+            # 1. Initialization from Drive to Colab
+            try:
+                if os.path.exists(remote_file):
+                    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+                    # Don't copy if the files have same path
+                    if os.path.realpath(remote_file) != os.path.realpath(output_file):
+                        shutil.copy2(remote_file, output_file)
+                        print(f"Exisiting file in Google Drive copied to local: {remote_file}")
+            except Exception as e:
+                print(f"Errore durante l'importazione da Drive: {e}")
+
+            # Controllo di ripresa (Resume logic)
+            if os.path.exists(output_file):
+                try:
+                    existing_df = pd.read_csv(output_file)
+                    # If the file has all the layers, it will be skipped
+                    if len(existing_df) >= num_layers - 1:
+                        print(f"Skipping {axis} - {vector_type}: already complete.")
+                        continue
+                    # Otherwise, it begins from the last layer
+                    start_layer = int(existing_df['layer'].max()) + 1
+                    results = existing_df.to_dict('records')
+                    print(f"Resuming {axis} - {vector_type} from layer {start_layer}...")
+                except Exception:
+                    pass
+            else:
+                print(f"Processing layers for {axis} on vector {vector_type} at ")
+
             # vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
 
-            for layer in range(1, num_layers):
+            for layer in range(start_layer, num_layers):
                 bbq_df = validation_df.copy()
 
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
@@ -299,7 +331,7 @@ def get_acc_change_per_layer():
                     args=(model, vector, 1)
                 )
 
-                # if your true labels live in column "label", you can now compute accuracy:
+
                 bbq_correct = (bbq_df["prediction"] == bbq_df["label"]).sum()
                 bbq_accuracy = bbq_correct / len(bbq_df)
 
@@ -309,9 +341,17 @@ def get_acc_change_per_layer():
                     'bbq_accuracy': float(bbq_accuracy),
                 })
 
-            results_df = pd.DataFrame(results)
-
-            results_df.to_csv(f"../data/layer_scores/{model_short_name}/{axis}_{vector_type}.csv", index=False)
+                # Save in the CSV at each layer calculation
+                results_df = pd.DataFrame(results)
+                results_df.to_csv(output_file, index=False)
+                
+                # 2. Backup: Copy updated file from Colab to Drive
+                try:
+                    os.makedirs(os.path.dirname(remote_file), exist_ok=True)
+                    if os.path.realpath(remote_file) != os.path.realpath(output_file):
+                        shutil.copy2(output_file, remote_file)
+                except Exception as e:
+                    print(f"Errore durante il salvataggio su Drive: {e}")
 
 
 if __name__ == '__main__':  # FIXME
