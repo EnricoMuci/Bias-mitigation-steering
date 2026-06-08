@@ -5,8 +5,8 @@ import pandas as pd
 import numpy as np
 import argparse
 
-# from tqdm.auto import tqdm
-from tqdm.notebook import tqdm
+from tqdm.auto import tqdm
+# from tqdm.notebook import tqdm
 
 from datasets import load_dataset
 from dialz import SteeringVector
@@ -122,7 +122,7 @@ def preview_status(): # NEW
 
         for _, row in best_layers.iterrows():
             axis = row['axis']
-            vt   = row['vt']
+            vt = row['vt']
             csv_name = f"{axis}_{vt}.csv"
 
             found_path = None
