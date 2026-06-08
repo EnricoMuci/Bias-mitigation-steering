@@ -13,6 +13,13 @@ from dialz import SteeringVector
 from utils import get_output
 from utils_new import *
 
+import warnings
+warnings.filterwarnings(
+    "ignore",
+    message="_check_is_size will be removed",
+    category=FutureWarning
+)
+
 transformers.logging.set_verbosity_error()
 
 parser = argparse.ArgumentParser()
