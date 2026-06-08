@@ -27,7 +27,7 @@ model_short_name = get_model_short_name(model_name)
 tokenizer = define_custom_tokenizer(model_name, model_path)
 
 LOCAL_BEST_LAYERS_DIR = f'../data/layer_scores/{model_short_name}/best_layers'
-LOCAL_BBQ_VALIDATE_DIR = f"../data/bbq_validate"  # 1 file per axis
+LOCAL_BBQ_VALIDATE_DIR = f"../data/bbq_validate"  # 1 file for each axis
 LOCAL_COEFF_SCORES_DIR = f'../data/coeff_scores/{model_short_name}'
 TOP_VECTOR_TYPES = ["top_train", "top_train+prompt"]
 
@@ -92,6 +92,63 @@ def prepare_MMLU():
         drop=True)
     print(len(mmlu_df))
     return mmlu_df
+
+def preview_status(): # NEW
+    """Print a preview of the current statu """
+    print("\n" + "="*55)
+    print("PRE-RUN STATUS CHECK")
+    print("="*55)
+
+    all_done = True
+
+    for top_vt in TOP_VECTOR_TYPES:
+        top_best_vt_file = f"{LOCAL_BEST_LAYERS_DIR}/{top_vt}.csv"
+        print(f"\n[{top_vt}]")
+
+        if not os.path.exists(top_best_vt_file):
+            print(f"  ✗ Missing file: {top_best_vt_file}")
+            all_done = False
+            continue
+
+        best_layers = pd.read_csv(top_best_vt_file)
+
+        for _, row in best_layers.iterrows():
+            axis = row['axis']
+            vt   = row['vt']
+            csv_name = f"{axis}_{vt}.csv"
+
+            found_path = None
+            if args.colab:
+                remote_dir = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/"
+                              f"{model_short_name}-{EXPERIMENT}/{top_vt}")
+                remote_fp = os.path.join(remote_dir, csv_name)
+                if os.path.exists(remote_fp):
+                    found_path = remote_fp
+
+            if found_path is None:
+                local_fp = os.path.join(LOCAL_COEFF_SCORES_DIR, top_vt, csv_name)
+                if os.path.exists(local_fp):
+                    found_path = local_fp
+
+            if found_path is None:
+                print(f"  ○ {axis:15s} ({vt})  →  not initialized")
+                all_done = False
+            else:
+                df = pd.read_csv(found_path)
+                done = len(df)
+                if done >= 21:
+                    print(f"  ✓ {axis:15s} ({vt})  →  complete ({done}/21)")
+                else:
+                    print(f"  … {axis:15s} ({vt})  →  partial ({done}/21)")
+                    all_done = False
+
+    print("\n" + "="*55)
+    if all_done:
+        print("All axes calculated :)")
+    else:
+        print("Resuming operations...")
+    print("="*55 + "\n")
+    return all_done
 
 
 def predict_row(row, model, vector, coeff, task):
@@ -289,6 +346,10 @@ def get_best_coeffs(mmlu_df=None):
 if __name__ == "__main__":
     if check_paths():
         print('All path correctly checked :)')
-        get_best_coeffs(prepare_MMLU())
+        already_done = preview_status()  # Status preview
+        if not already_done:
+            get_best_coeffs(prepare_MMLU())  # Work
+        else:
+            print("Nulla da fare, uscita.")
     else:
         print('Something wrong :(')
