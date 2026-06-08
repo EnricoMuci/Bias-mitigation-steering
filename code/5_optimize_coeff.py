@@ -131,7 +131,7 @@ def preview_status(): # NEW
                     found_path = local_fp
 
             if found_path is None:
-                print(f"  ○ {axis:15s} ({vt})  →  not initialized")
+                print(f"  ✗ {axis:15s} ({vt})  →  not initialized")
                 all_done = False
             else:
                 df = pd.read_csv(found_path)
@@ -139,7 +139,7 @@ def preview_status(): # NEW
                 if done >= 21:
                     print(f"  ✓ {axis:15s} ({vt})  →  complete ({done}/21)")
                 else:
-                    print(f"  … {axis:15s} ({vt})  →  partial ({done}/21)")
+                    print(f"  ○ {axis:15s} ({vt})  →  partial ({done}/21)") #…
                     all_done = False
 
     print("\n" + "="*55)
