@@ -279,12 +279,22 @@ def get_best_coeffs(mmlu_df=None):
             if type(layers[layer]).__name__ != 'SteeringModule':
                 layers[layer] = SteeringModule(layers[layer])
 
+            # for coeff in tqdm( # OLD
+            #         np.linspace(-2.0, 2.0, 21),
+            #         desc=f"Coeffs for {axis}",
+            #         total=21,
+            #         initial=len(completed_coeffs)
+            #     ):
+            all_coeffs = np.linspace(-2.0, 2.0, 21)
+            remaining_coeffs = [c for c in all_coeffs if f"{c:.1f}" not in completed_coeffs]
+
             for coeff in tqdm(
-                    np.linspace(-2.0, 2.0, 21),
-                    desc=f"Coeffs for {axis}",
-                    total=21,
-                    initial=len(completed_coeffs)
-                ):
+                    remaining_coeffs,
+                    desc=f"  Coeffs for {axis}",
+                    total=21,  # max length
+                    initial=len(completed_coeffs),  # initial step
+                    leave=False,
+            ):
                 # Avoid previously calculated coefficients
                 coeff_key = f"{coeff:.1f}"
                 if coeff_key in completed_coeffs:
