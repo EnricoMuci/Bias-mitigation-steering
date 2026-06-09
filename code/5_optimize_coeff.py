@@ -302,6 +302,7 @@ def get_best_coeffs(mmlu_df=None):
                     total=21,  # max length
                     initial=len(completed_coeffs),  # initial step
                     leave=False,
+                    dynamic_ncols=True,
             ):
                 # Avoid previously calculated coefficients
                 coeff_key = f"{coeff:.1f}"
@@ -335,8 +336,8 @@ def get_best_coeffs(mmlu_df=None):
 
                     results.append({
                         'coeff': round(coeff, 1),
-                        'bbq_correct': int(bbq_correct), # int
-                        'mmlu_correct': int(mmlu_correct), # int
+                        'bbq_correct': int(bbq_correct),  # int
+                        'mmlu_correct': int(mmlu_correct),  # int
                         'bbq_accuracy': round(bbq_accuracy, 3),
                         'mmlu_accuracy': round(mmlu_accuracy, 3),
                     })
