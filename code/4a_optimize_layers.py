@@ -19,6 +19,12 @@ from utils import load_and_tokenize_contrastive, get_output, bbq_axes
 from utils_new import *
 from transformers import AutoConfig
 
+import warnings
+warnings.filterwarnings(
+    "ignore",
+    message="_check_is_size will be removed",
+    category=FutureWarning
+)
 transformers.logging.set_verbosity_error()
 
 parser = argparse.ArgumentParser()
@@ -28,6 +34,7 @@ parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
 parser.add_argument('-t', '--type', type=int, default=2)  # train[+prompt] → get_acc_change_per_layer
 args = parser.parse_args()
+
 
 
 if args.axes is not None:

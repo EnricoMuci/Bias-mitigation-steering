@@ -40,16 +40,17 @@ LOCAL_COEFF_SCORES_DIR = f'../data/coeff_scores/{model_short_name}'
 TOP_VECTOR_TYPES = ["top_train", "top_train+prompt"]
 
 
-def resume_logic(axis, remote_file_path, local_file_path):
+def resume_logic(axis, remote_file_path, local_file_path, vt):
     existing_csv = None
+    print(' ')
     if args.colab and os.path.exists(remote_file_path):
         existing_csv = pd.read_csv(remote_file_path)
-        print(f"Resuming {axis} from Drive ({len(existing_csv)} coefficients already done).")
+        print(f"Resuming {axis}-{vt} from Drive file ({len(existing_csv)} coefficients already done).")
     elif os.path.exists(local_file_path):
         existing_csv = pd.read_csv(local_file_path)
-        print(f"Resuming {axis} from local top_vt_csv ({len(existing_csv)} coefficients already done).")
+        print(f"Resuming {axis}-{vt} from local file ({len(existing_csv)} coefficients already done).")
     else:
-        print(f"No pre-calculation for {axis}, starting from scratch.")
+        print(f"No pre-calculation for {axis}-{vt}, starting from scratch.")
     return existing_csv
 
 
@@ -228,7 +229,7 @@ def get_best_coeffs(mmlu_df=None):
             continue
 
         best_layers = pd.read_csv(top_best_vt_file)
-        print(best_layers.head())
+        print('\n', best_layers.head(), '\n') # Print head of best_layers
         print(f"Processing {top_vt}.csv")
 
         for _, row in best_layers.iterrows():  # for each discrimination-axis
@@ -265,7 +266,7 @@ def get_best_coeffs(mmlu_df=None):
             completed_coeffs = set()
 
             # Resume logic, to avoid previous coefficients
-            existing_csv = resume_logic(axis, remote_file_path, local_file_path)
+            existing_csv = resume_logic(axis, remote_file_path, local_file_path, vt)
 
             if existing_csv is not None:
                 results = existing_csv.to_dict('records')
@@ -357,7 +358,7 @@ def get_best_coeffs(mmlu_df=None):
             if results:
                 results_df = pd.DataFrame(results)
                 save_results(results_df, local_file_path, remote_file_path)
-                print(f"Completed {axis}: {len(results)} coefficients saved.")
+                print(f"Completed {axis}: {len(results)} coefficients saved.\n")
         # for axes (files in /bbq_validate, rows in /best_layers)
     # for vector-type files (train, train+prompt)
 
