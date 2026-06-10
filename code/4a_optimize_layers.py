@@ -27,6 +27,9 @@ warnings.filterwarnings(
 )
 transformers.logging.set_verbosity_error()
 
+import zoneinfo
+tz_italy = zoneinfo.ZoneInfo("Europe/Rome")
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--mode', type=str, default='full')  # set at the end of file
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
@@ -201,7 +204,7 @@ def get_linear_separability():
         if axis not in bbq_axes:  # NEW
             print(f'Axis {axis} is not admitted')
             continue
-        print(f"Creating vector for {axis} at:", datetime.datetime.now())
+        print(f"Creating vector for {axis} at:", datetime.datetime.now(tz=tz_italy))
         path = f"../data/bbq_train/{axis}_train.json"
 
         train_dataset = load_and_tokenize_contrastive(model_path, path)
@@ -280,7 +283,8 @@ def get_acc_change_per_layer():
             remote_file = f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/{model_short_name}-{EXPERIMENT}/{axis}_{vector_type}.csv"
             start_layer = 1
             results = []
-            
+
+            print(' ')
             # 1. Initialization from Drive to Colab
             try:
                 if os.path.exists(remote_file):
@@ -290,7 +294,7 @@ def get_acc_change_per_layer():
                         shutil.copy2(remote_file, output_file)
                         print(f"Exisiting file in Google Drive copied to local: {remote_file}")
             except Exception as e:
-                print(f"Errore durante l'importazione da Drive: {e}")
+                print(f"Error while importing from Drive: {e}")
 
             # Controllo di ripresa (Resume logic)
             if os.path.exists(output_file):
@@ -305,9 +309,10 @@ def get_acc_change_per_layer():
                     results = existing_df.to_dict('records')
                     print(f"Resuming {axis} - {vector_type} from layer {start_layer}...")
                 except Exception:
-                    pass
+                    raise
             else:
-                print(f"Processing layers for {axis} on vector {vector_type} at ")
+                print(f"Processing layers for {axis} on vector {vector_type}")
+
 
             # vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
 
@@ -328,7 +333,7 @@ def get_acc_change_per_layer():
                     layers[layer] = SteeringModule(layers[layer])
                 # END NEW Wrapping
 
-                start_time = datetime.datetime.now()
+                start_time = datetime.datetime.now(tz=tz_italy)
                 print(f"\n\n=== layer = {layer} @ {start_time} ===")
 
                 # apply the predictor to every row
