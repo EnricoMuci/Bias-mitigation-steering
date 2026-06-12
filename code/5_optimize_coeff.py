@@ -24,9 +24,10 @@ warnings.filterwarnings(
 transformers.logging.set_verbosity_error()
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
-parser.add_argument('-p', '--path', type=str, default=None)  # model path
-parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')
+parser.add_argument('-p', '--path', type=str, default=None, help='model path')
+parser.add_argument('-c', '--colab', action='store_true', help='flag about remote saving')
+parser.add_argument('--preview', action='store_true', help='show only the preview')
 args = parser.parse_args()
 
 (model_name, model_path) = new_get_args([args.name, args.path])
@@ -229,7 +230,7 @@ def get_best_coeffs(mmlu_df=None):
             continue
 
         best_layers = pd.read_csv(top_best_vt_file)
-        print('\n', best_layers.head(), '\n') # Print head of best_layers
+        print('\n', best_layers.head(), '\n')  # Print head of best_layers
         print(f"Processing {top_vt}.csv")
 
         for _, row in best_layers.iterrows():  # for each discrimination-axis
@@ -299,7 +300,7 @@ def get_best_coeffs(mmlu_df=None):
 
             for coeff in tqdm(
                     remaining_coeffs,
-                    desc=f"  Coeffs for {axis}",
+                    desc=f"  Coeffs for {axis}: ",
                     total=21,  # max length
                     initial=len(completed_coeffs),  # initial step
                     leave=False,
@@ -365,11 +366,12 @@ def get_best_coeffs(mmlu_df=None):
 
 if __name__ == "__main__":
     if check_paths():
-        print('All path correctly checked :)')
-        already_done = preview_status()  # Status preview
-        if not already_done:
-            get_best_coeffs(prepare_MMLU())  # Work
-        else:
-            print("Nulla da fare, uscita.")
+        print('All path correctly checked')
+        already_done = preview_status()  # print current status
+        if not args.preview:  # if not Only preview
+            if not already_done:
+                get_best_coeffs(prepare_MMLU())  # Work
+            else:
+                print("Nothing to do. All work done")
     else:
-        print('Something wrong :(')
+        print('Something wrong')
