@@ -1,12 +1,21 @@
-datasets
-dialz
-numpy
-pandas
-python-dotenv
+# Core ML
 torch
-transformers
+torchvision
+torchaudio
+
+# Data & ML utils
+pandas
+numpy
 matplotlib
+scikit-learn
 tqdm
 
+# HuggingFace / LLM
+datasets
+transformers
 bitsandbytes
 accelerate
+
+# Project
+dialz
+python-dotenv
