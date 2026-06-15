@@ -52,6 +52,96 @@ os.makedirs(f'../figs/{model_short_name}', exist_ok=True)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
 
+def preview_status():
+    """
+    Stampa lo stato dei file prodotti da get_linear_separability() e get_acc_change_per_layer()
+    prima di caricare il modello.
+    """
+    config = AutoConfig.from_pretrained(model_path)
+    num_layers = getattr(config, "n_layer", None) or config.num_hidden_layers
+
+    all_types = ["train", "train+prompt"]
+    if args.type == 2:
+        set_types = all_types.copy()
+    else:
+        set_types = [all_types[args.type]]
+
+    # ── SEPARABILITY ──────────────────────────────────────────────
+    if args.mode in ['separability', 'full']:
+        print("\n" + "="*55)
+        print("SEPARABILITY STATUS  (get_linear_separability)")
+        print("="*55)
+
+        sep_all_done = True
+        for axis in chosen_axes:
+            if axis not in bbq_axes:
+                continue
+            for vt in ["train", "train+prompt"]:
+                csv_path = f"../data/separability_scores/{model_short_name}/{axis}_{vt}.csv"
+                png_path = f"../figs/{model_short_name}/{axis}_bbq_{vt}.png"
+                csv_ok   = os.path.exists(csv_path)
+                png_ok   = os.path.exists(png_path)
+
+                if csv_ok and png_ok:
+                    df   = pd.read_csv(csv_path)
+                    print(f"  ✓ {axis:15s} ({vt:12s})  →  completo ({len(df)} layer)")
+                elif csv_ok or png_ok:
+                    print(f"  … {axis:15s} ({vt:12s})  →  parziale "
+                          f"(csv={'✓' if csv_ok else '✗'}, png={'✓' if png_ok else '✗'})")
+                    sep_all_done = False
+                else:
+                    print(f"  ○ {axis:15s} ({vt:12s})  →  non iniziato")
+                    sep_all_done = False
+
+        if sep_all_done:
+            print("\n  Tutti i file di separabilità sono presenti.")
+
+    # ── LAYER ACCURACY ────────────────────────────────────────────
+    if args.mode in ['layer', 'full']:
+        print("\n" + "="*55)
+        print(f"LAYER ACCURACY STATUS  (get_acc_change_per_layer)")
+        print(f"Totale layer attesi: {num_layers - 1}  (layer 1 → {num_layers - 1})")
+        print("="*55)
+
+        layer_all_done = True
+        for axis in chosen_axes:
+            if axis not in bbq_axes:
+                continue
+            for vt in set_types:
+                # Cerca prima su Drive, poi in locale (stessa priorità della resume logic)
+                remote_file = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/"
+                               f"{model_short_name}-{EXPERIMENT}/{axis}_{vt}.csv")
+                local_file  = f"../data/layer_scores/{model_short_name}/{axis}_{vt}.csv"
+
+                found_path = None
+                source     = ""
+                if os.path.exists(remote_file):
+                    found_path = remote_file
+                    source     = "Drive"
+                elif os.path.exists(local_file):
+                    found_path = local_file
+                    source     = "locale"
+
+                if found_path is None:
+                    print(f"  ○ {axis:15s} ({vt:12s})  →  non iniziato")
+                    layer_all_done = False
+                else:
+                    df   = pd.read_csv(found_path)
+                    done = len(df)
+                    expected = num_layers - 1
+                    if done >= expected:
+                        print(f"  ✓ {axis:15s} ({vt:12s})  →  completo "
+                              f"({done}/{expected} layer) [{source}]")
+                    else:
+                        next_layer = int(df['layer'].max()) + 1
+                        print(f"  … {axis:15s} ({vt:12s})  →  parziale "
+                              f"({done}/{expected} layer, riprende da layer {next_layer}) [{source}]")
+                        layer_all_done = False
+
+        if layer_all_done:
+            print("\n  Tutti i layer sono completi.")
+
+    print("="*55 + "\n")
 
 def batched_get_hiddens(
         model,
@@ -367,6 +457,8 @@ def get_acc_change_per_layer():
 
 
 if __name__ == '__main__':  # FIXME
+    preview_status()
+
     if args.mode in ['separability', 'full']:
         get_linear_separability()
     if args.mode in ['layer', 'full']:
