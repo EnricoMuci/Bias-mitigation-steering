@@ -420,8 +420,8 @@ def get_acc_change_per_layer():
                 except Exception:
                     raise
             else:
-                print(f"Processing layers for {axis} on vector {vector_type}")
-
+                print(f"Processing all layers for {axis} on vector {vector_type}")
+                missing = list(range(1, num_layers))
 
             # vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
 
