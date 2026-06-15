@@ -379,12 +379,20 @@ def get_acc_change_per_layer():
             try:
                 if os.path.exists(remote_file):
                     os.makedirs(os.path.dirname(output_file), exist_ok=True)
-                    # Don't copy if the files have same path
-                    if os.path.realpath(remote_file) != os.path.realpath(output_file):
-                        shutil.copy2(remote_file, output_file)
-                        print(f"Exisiting file in Google Drive copied to local: {remote_file}")
+                    shutil.copy2(remote_file, output_file)
             except Exception as e:
-                print(f"Error while importing from Drive: {e}")
+                print(f"Drive Copy failed: {e}. Directly reading from Drive.")
+                if os.path.exists(remote_file):
+                    output_file = remote_file  # fallback: leggi da Drive direttamente
+            # try:
+            #     if os.path.exists(remote_file):
+            #         os.makedirs(os.path.dirname(output_file), exist_ok=True)
+            #         # Don't copy if the files have same path
+            #         if os.path.realpath(remote_file) != os.path.realpath(output_file):
+            #             shutil.copy2(remote_file, output_file)
+            #             print(f"Exisiting file in Google Drive copied to local: {remote_file}")
+            # except Exception as e:
+            #     print(f"Error while importing from Drive: {e}")
 
             # Controllo di ripresa (Resume logic)
             if os.path.exists(output_file):
@@ -395,7 +403,18 @@ def get_acc_change_per_layer():
                         print(f"Skipping {axis} - {vector_type}: already complete.")
                         continue
                     # Otherwise, it begins from the last layer
-                    start_layer = int(existing_df['layer'].max()) + 1
+                    # start_layer = int(existing_df['layer'].max()) + 1 # OLD start_layer
+
+                    done_layers = set(existing_df['layer'].tolist())
+                    all_layers = set(range(1, num_layers))
+                    missing = sorted(all_layers - done_layers)
+
+                    if not missing:
+                        print(f"Skipping {axis} - {vector_type}: already complete.")
+                        continue
+
+                    start_layer = missing[0]  # NEW first missing layer
+
                     results = existing_df.to_dict('records')
                     print(f"Resuming {axis} - {vector_type} from layer {start_layer}...")
                 except Exception:
@@ -406,7 +425,7 @@ def get_acc_change_per_layer():
 
             # vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
 
-            for layer in range(start_layer, num_layers):
+            for layer in missing:
                 bbq_df = validation_df.copy()
 
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
