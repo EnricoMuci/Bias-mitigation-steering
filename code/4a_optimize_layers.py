@@ -20,6 +20,7 @@ from utils_new import *
 from transformers import AutoConfig
 
 import warnings
+
 warnings.filterwarnings(
     "ignore",
     message="_check_is_size will be removed",
@@ -28,6 +29,7 @@ warnings.filterwarnings(
 transformers.logging.set_verbosity_error()
 
 import zoneinfo
+
 tz_italy = zoneinfo.ZoneInfo("Europe/Rome")
 
 parser = argparse.ArgumentParser()
@@ -38,19 +40,17 @@ parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes t
 parser.add_argument('-t', '--type', type=int, default=2)  # train[+prompt] → get_acc_change_per_layer
 args = parser.parse_args()
 
-
-
 if args.axes is not None:
     chosen_axes = args.axes.copy()  # list type
 else:
     chosen_axes = bbq_axes
-
 
 (model_name, model_path) = new_get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 os.makedirs(f'../figs/{model_short_name}', exist_ok=True)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
+
 
 def preview_status():
     """
@@ -68,9 +68,9 @@ def preview_status():
 
     # ── SEPARABILITY ──────────────────────────────────────────────
     if args.mode in ['separability', 'full']:
-        print("\n" + "="*55)
+        print("\n" + "=" * 55)
         print("SEPARABILITY STATUS  (get_linear_separability)")
-        print("="*55)
+        print("=" * 55)
 
         sep_all_done = True
         for axis in chosen_axes:
@@ -79,29 +79,29 @@ def preview_status():
             for vt in ["train", "train+prompt"]:
                 csv_path = f"../data/separability_scores/{model_short_name}/{axis}_{vt}.csv"
                 png_path = f"../figs/{model_short_name}/{axis}_bbq_{vt}.png"
-                csv_ok   = os.path.exists(csv_path)
-                png_ok   = os.path.exists(png_path)
+                csv_ok = os.path.exists(csv_path)
+                png_ok = os.path.exists(png_path)
 
                 if csv_ok and png_ok:
-                    df   = pd.read_csv(csv_path)
-                    print(f"  ✓ {axis:15s} ({vt:12s})  →  completo ({len(df)} layer)")
+                    df = pd.read_csv(csv_path)
+                    print(f"  ✓ {axis:15s} ({vt:12s})  →  complete ({len(df)} layer)")
                 elif csv_ok or png_ok:
-                    print(f"  … {axis:15s} ({vt:12s})  →  parziale "
+                    print(f"  … {axis:15s} ({vt:12s})  →  partial "
                           f"(csv={'✓' if csv_ok else '✗'}, png={'✓' if png_ok else '✗'})")
                     sep_all_done = False
                 else:
-                    print(f"  ○ {axis:15s} ({vt:12s})  →  non iniziato")
+                    print(f"  ○ {axis:15s} ({vt:12s})  →  not started")
                     sep_all_done = False
 
         if sep_all_done:
-            print("\n  Tutti i file di separabilità sono presenti.")
+            print("\n  All separability files are done.")
 
     # ── LAYER ACCURACY ────────────────────────────────────────────
     if args.mode in ['layer', 'full']:
-        print("\n" + "="*55)
+        print("\n" + "=" * 55)
         print(f"LAYER ACCURACY STATUS  (get_acc_change_per_layer)")
-        print(f"Totale layer attesi: {num_layers - 1}  (layer 1 → {num_layers - 1})")
-        print("="*55)
+        print(f"Total layers: {num_layers - 1}  (layer 1 → {num_layers - 1})")
+        print("=" * 55)
 
         layer_all_done = True
         for axis in chosen_axes:
@@ -111,37 +111,38 @@ def preview_status():
                 # Cerca prima su Drive, poi in locale (stessa priorità della resume logic)
                 remote_file = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/"
                                f"{model_short_name}-{EXPERIMENT}/{axis}_{vt}.csv")
-                local_file  = f"../data/layer_scores/{model_short_name}/{axis}_{vt}.csv"
+                local_file = f"../data/layer_scores/{model_short_name}/{axis}_{vt}.csv"
 
                 found_path = None
-                source     = ""
+                source = ""
                 if os.path.exists(remote_file):
                     found_path = remote_file
-                    source     = "Drive"
+                    source = "Drive"
                 elif os.path.exists(local_file):
                     found_path = local_file
-                    source     = "locale"
+                    source = "Local"
 
                 if found_path is None:
-                    print(f"  ○ {axis:15s} ({vt:12s})  →  non iniziato")
+                    print(f"  ○ {axis:15s} ({vt:12s})  →  not started")
                     layer_all_done = False
                 else:
-                    df   = pd.read_csv(found_path)
+                    df = pd.read_csv(found_path)
                     done = len(df)
                     expected = num_layers - 1
                     if done >= expected:
-                        print(f"  ✓ {axis:15s} ({vt:12s})  →  completo "
+                        print(f"  ✓ {axis:15s} ({vt:12s})  →  complete "
                               f"({done}/{expected} layer) [{source}]")
                     else:
                         next_layer = int(df['layer'].max()) + 1
-                        print(f"  … {axis:15s} ({vt:12s})  →  parziale "
-                              f"({done}/{expected} layer, riprende da layer {next_layer}) [{source}]")
+                        print(f"  … {axis:15s} ({vt:12s})  →  partial "
+                              f"({done}/{expected} layers done, resuming from layer {next_layer}) [{source}]")
                         layer_all_done = False
 
         if layer_all_done:
-            print("\n  Tutti i layer sono completi.")
+            print("\n  All layers are complete.")
 
-    print("="*55 + "\n")
+    print("=" * 55 + "\n")
+
 
 def batched_get_hiddens(
         model,
@@ -199,7 +200,7 @@ def visualize_2d_PCA(
         pooling: str = 'final',  # 'final' or 'mean'
         n_cols: int = 5,
         batch_size: int = 32
-    ):
+):
     """
     Perform 2D PCA on the hidden states of positive vs negative examples for each layer,
     plot all layers in a grid, and compute linear separability using a logistic classifier.
@@ -452,7 +453,6 @@ def get_acc_change_per_layer():
                     args=(model, vector, 1)
                 )
 
-
                 bbq_correct = (bbq_df["prediction"] == bbq_df["label"]).sum()
                 bbq_accuracy = bbq_correct / len(bbq_df)
 
@@ -465,7 +465,7 @@ def get_acc_change_per_layer():
                 # Save in the CSV at each layer calculation
                 results_df = pd.DataFrame(results)
                 results_df.to_csv(output_file, index=False)
-                
+
                 # 2. Backup: Copy updated file from Colab to Drive
                 try:
                     os.makedirs(os.path.dirname(remote_file), exist_ok=True)
