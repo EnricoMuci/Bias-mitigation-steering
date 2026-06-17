@@ -1,13 +1,18 @@
+import traceback
+
 import torch
 import typing
 import warnings
 
 from dialz import SteeringModel
 from dialz.vector import SteeringModule, model_layer_list
+import tqdm
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
 
 import utils
+import os
 
+STRICT_QUANTIZATION = os.environ.get("STRICT_QUANTIZATION", "0") == "1"
 REMOTE_DRIVE_THESIS_PROJECT = '/content/drive/MyDrive/ThesisProject'
 EXPERIMENT = 'reproduced'  # or 'original
 VECTOR_TYPES = ['train', 'train+prompt']
@@ -121,6 +126,10 @@ def create_quantized_model(model_name, model_path, layer_ids=None):
             model_path=model_path, layer_ids=layer_ids,
             model_name=model_name, quantization_config=bnb_config)
     except Exception as e:
+        tqdm.write(f"[FALLBACK NON QUANTIZED] {model_name}: {type(e).__name__}: {e}")
+        traceback.print_exc()
+        if STRICT_QUANTIZATION:
+            raise
         return SteeringModel(model_path, [5])  # Second element is arbritary as we're not generating yet
 
 
