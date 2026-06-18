@@ -1,13 +1,12 @@
 import argparse
 
-import tqdm
 import datetime
 import math
 import transformers
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import os
+
 import shutil
 
 from dialz import SteeringVector
@@ -20,7 +19,7 @@ from utils_new import *
 from transformers import AutoConfig
 
 import warnings
-
+# ✓ ✗ … ○
 warnings.filterwarnings(
     "ignore",
     message="_check_is_size will be removed",
@@ -84,13 +83,13 @@ def preview_status():
 
                 if csv_ok and png_ok:
                     df = pd.read_csv(csv_path)
-                    print(f"  ✓ {axis:15s} ({vt:12s})  →  complete ({len(df)} layer)")
+                    print(f"  ✓ {axis:15s}  {vt:12s}   →  complete ({len(df)} layer)")
                 elif csv_ok or png_ok:
-                    print(f"  … {axis:15s} ({vt:12s})  →  partial "
+                    print(f"  ○ {axis:15s}  {vt:12s}   →  partial " 
                           f"(csv={'✓' if csv_ok else '✗'}, png={'✓' if png_ok else '✗'})")
                     sep_all_done = False
                 else:
-                    print(f"  ○ {axis:15s} ({vt:12s})  →  not started")
+                    print(f"  ✗ {axis:15s} ({vt:12s})  →  not started") # ○
                     sep_all_done = False
 
         if sep_all_done:

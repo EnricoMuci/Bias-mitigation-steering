@@ -1,4 +1,4 @@
-import os
+
 import datetime
 import transformers
 import pandas as pd
@@ -27,7 +27,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')
 parser.add_argument('-p', '--path', type=str, default=None, help='model path')
 parser.add_argument('-c', '--colab', action='store_true', help='flag about remote saving')
-parser.add_argument('--preview', action='store_true', help='show only the preview')
+parser.add_argument('-o', '--only-preview', action='store_true', help='show only the preview')
 args = parser.parse_args()
 
 (model_name, model_path) = new_get_args([args.name, args.path])
@@ -368,7 +368,7 @@ if __name__ == "__main__":
     if check_paths():
         print('All path correctly checked')
         already_done = preview_status()  # print current status
-        if not args.preview:  # if not Only preview
+        if not args.only_preview:  # if not Only preview
             if not already_done:
                 get_best_coeffs(prepare_MMLU())  # Work
             else:
