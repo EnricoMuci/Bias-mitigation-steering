@@ -35,8 +35,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--mode', type=str, default='full')  # set at the end of file
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
-parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
-parser.add_argument('-t', '--type', type=int, default=2)  # train[+prompt] → get_acc_change_per_layer
+parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
+parser.add_argument('-t', '--type', type=int, default=2, help='train[+prompt] → get_acc_change_per_layer')
+parser.add_argument('-c', '--colab', action='store_true', help='executing on Colab')
+parser.add_argument('-o', '--only-preview', action='store_true', help='only preview')
 args = parser.parse_args()
 
 if args.axes is not None:
@@ -107,17 +109,18 @@ def preview_status():
             if axis not in bbq_axes:
                 continue
             for vt in set_types:
-                # Cerca prima su Drive, poi in locale (stessa priorità della resume logic)
-                remote_file = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/"
-                               f"{model_short_name}-{EXPERIMENT}/{axis}_{vt}.csv")
+                # Cerca prima su Drive (solo se --colab), poi in locale (stessa priorità della resume logic)
                 local_file = f"../data/layer_scores/{model_short_name}/{axis}_{vt}.csv"
 
                 found_path = None
                 source = ""
-                if os.path.exists(remote_file):
-                    found_path = remote_file
-                    source = "Drive"
-                elif os.path.exists(local_file):
+                if args.colab:
+                    remote_file = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/"
+                                   f"{model_short_name}-{EXPERIMENT}/{axis}_{vt}.csv")
+                    if os.path.exists(remote_file):
+                        found_path = remote_file
+                        source = "Drive"
+                if found_path is None and os.path.exists(local_file):
                     found_path = local_file
                     source = "Local"
 
@@ -375,15 +378,16 @@ def get_acc_change_per_layer():
             results = []
 
             print(' ')
-            # 1. Initialization from Drive to Colab
-            try:
-                if os.path.exists(remote_file):
-                    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-                    shutil.copy2(remote_file, output_file)
-            except Exception as e:
-                print(f"Drive Copy failed: {e}. Directly reading from Drive.")
-                if os.path.exists(remote_file):
-                    output_file = remote_file  # fallback: leggi da Drive direttamente
+            # 1. Initialization from Drive to Colab (solo se --colab)
+            if args.colab:
+                try:
+                    if os.path.exists(remote_file):
+                        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+                        shutil.copy2(remote_file, output_file)
+                except Exception as e:
+                    print(f"Drive Copy failed: {e}. Directly reading from Drive.")
+                    if os.path.exists(remote_file):
+                        output_file = remote_file  # fallback: leggi da Drive direttamente
             # try:
             #     if os.path.exists(remote_file):
             #         os.makedirs(os.path.dirname(output_file), exist_ok=True)
@@ -426,58 +430,65 @@ def get_acc_change_per_layer():
             # vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
 
             for layer in missing:
-                bbq_df = validation_df.copy()
-
-                vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
-
-                # Layer unwrapping : NEW
-                layers = model_layer_list(model.model)
-                for old_id in model.layer_ids:
-                    old_layer = layers[old_id]
-                    if isinstance(old_layer, SteeringModule):
-                        layers[old_id] = old_layer.block  # unwrap
-
-                model.layer_ids = [layer]
-                if not isinstance(layers[layer], SteeringModule):
-                    layers[layer] = SteeringModule(layers[layer])
-                # END NEW Wrapping
-
-                start_time = datetime.datetime.now(tz=tz_italy)
-                print(f"\n\n=== layer = {layer} @ {start_time} ===")
-
-                # apply the predictor to every row
-                bbq_df[['ans', 'prediction', 'correct']] = bbq_df.apply(
-                    predict_row,
-                    axis=1,
-                    args=(model, vector, 1)
-                )
-
-                bbq_correct = (bbq_df["prediction"] == bbq_df["label"]).sum()
-                bbq_accuracy = bbq_correct / len(bbq_df)
-
-                results.append({
-                    'layer': layer,
-                    'bbq_correct': int(bbq_correct),
-                    'bbq_accuracy': float(bbq_accuracy),
-                })
-
-                # Save in the CSV at each layer calculation
-                results_df = pd.DataFrame(results)
-                results_df.to_csv(output_file, index=False)
-
-                # 2. Backup: Copy updated file from Colab to Drive
                 try:
-                    os.makedirs(os.path.dirname(remote_file), exist_ok=True)
-                    if os.path.realpath(remote_file) != os.path.realpath(output_file):
-                        shutil.copy2(output_file, remote_file)
+                    bbq_df = validation_df.copy()
+
+                    vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf')
+
+                    # Layer unwrapping : NEW
+                    layers = model_layer_list(model.model)
+                    for old_id in model.layer_ids:
+                        old_layer = layers[old_id]
+                        if isinstance(old_layer, SteeringModule):
+                            layers[old_id] = old_layer.block  # unwrap
+
+                    model.layer_ids = [layer]
+                    if not isinstance(layers[layer], SteeringModule):
+                        layers[layer] = SteeringModule(layers[layer])
+                    # END NEW Wrapping
+
+                    start_time = datetime.datetime.now(tz=tz_italy)
+                    print(f"\n\n=== layer = {layer} @ {start_time} ===")
+
+                    # apply the predictor to every row
+                    bbq_df[['ans', 'prediction', 'correct']] = bbq_df.apply(
+                        predict_row,
+                        axis=1,
+                        args=(model, vector, 1)
+                    )
+
+                    bbq_correct = (bbq_df["prediction"] == bbq_df["label"]).sum()
+                    bbq_accuracy = bbq_correct / len(bbq_df)
+
+                    results.append({
+                        'layer': layer,
+                        'bbq_correct': int(bbq_correct),
+                        'bbq_accuracy': float(bbq_accuracy),
+                    })
+
+                    # Save in the CSV at each layer calculation
+                    results_df = pd.DataFrame(results)
+                    results_df.to_csv(output_file, index=False)
+
+                    # 2. Backup: Copy updated file from Colab to Drive (solo se --colab)
+                    if args.colab:
+                        try:
+                            os.makedirs(os.path.dirname(remote_file), exist_ok=True)
+                            if os.path.realpath(remote_file) != os.path.realpath(output_file):
+                                shutil.copy2(output_file, remote_file)
+                        except Exception as e:
+                            print(f"Error saving in Drive: {e}")
+
                 except Exception as e:
-                    print(f"Errore durante il salvataggio su Drive: {e}")
+                    print(f"[ERROR in layer {layer}] {type(e).__name__}: {e} — next layer.")
+                    continue
 
 
 if __name__ == '__main__':  # FIXME
     preview_status()
 
-    if args.mode in ['separability', 'full']:
-        get_linear_separability()
-    if args.mode in ['layer', 'full']:
-        get_acc_change_per_layer()
+    if not args.only_preview:
+        if args.mode in ['separability', 'full']:
+            get_linear_separability()
+        if args.mode in ['layer', 'full']:
+            get_acc_change_per_layer()
