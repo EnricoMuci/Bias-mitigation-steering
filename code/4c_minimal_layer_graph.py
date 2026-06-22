@@ -4,15 +4,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+# from utils import bbq_axes
 
 
-def create_minimal_age_layer_graph():
+def create_minimal_age_layer_graph(axis):
     """
     Create a minimal version of the age layer graph with green vertical line at layer 13
     """
     # Load data
-    sep_data = pd.read_csv('../original/separability_scores/mistral/age_train+prompt.csv')
-    acc_data = pd.read_csv('../original/layer_scores/mistral/age_train+prompt.csv')
+    sep_data = pd.read_csv(f'../original/separability_scores/mistral/{axis}_train+prompt.csv')
+    acc_data = pd.read_csv(f'../original/layer_scores/mistral/{axis}_train+prompt.csv')
 
     # Create figure with clean minimal design
     fig, ax = plt.subplots(figsize=(7.2, 5.4))
@@ -63,14 +64,15 @@ def create_minimal_age_layer_graph():
     figs_path = '../figs'
     minimal_path = os.path.join(figs_path, 'minimal_graph')
     os.makedirs(minimal_path, exist_ok=True)
-    plt.savefig(f'{minimal_path}/age_minimal_layers.pdf', dpi=300, bbox_inches='tight')
-    plt.savefig(f'{minimal_path}/age_minimal_layers.svg', dpi=300, bbox_inches='tight')
-    plt.savefig(f'{minimal_path}/age_minimal_layers.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{minimal_path}/{axis}_minimal_layers.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{minimal_path}/{axis}_minimal_layers.svg', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{minimal_path}/{axis}_minimal_layers.png', dpi=300, bbox_inches='tight')
 
 
-    print("Minimal age layer graph saved as age_minimal_layers.pdf, .svg, and .png")
+    print(f"Minimal {axis} layer graph saved as age_minimal_layers.pdf, .svg, and .png")
     plt.show()
 
 
 if __name__ == "__main__":
-    create_minimal_age_layer_graph()
+    for axis in ['age', 'appearance', 'gender']:
+        create_minimal_age_layer_graph(axis)
