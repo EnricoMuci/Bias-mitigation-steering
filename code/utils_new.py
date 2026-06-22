@@ -6,7 +6,7 @@ import warnings
 
 from dialz import SteeringModel
 from dialz.vector import SteeringModule, model_layer_list
-import tqdm
+from tqdm.auto import tqdm
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
 
 import utils

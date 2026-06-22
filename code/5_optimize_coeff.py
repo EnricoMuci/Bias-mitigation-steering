@@ -4,15 +4,19 @@ import transformers
 import pandas as pd
 import numpy as np
 import argparse
+import os
 
 from tqdm.auto import tqdm
 # from tqdm.notebook import tqdm
 
 from datasets import load_dataset
 from dialz import SteeringVector
+from dialz.vector import SteeringModule
 
 from utils import get_output
-from utils_new import *
+from utils_new import (new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model,
+                       model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, EXPERIMENT)
+
 
 import warnings
 warnings.filterwarnings(
@@ -103,6 +107,7 @@ def prepare_MMLU():
     print(len(mmlu_df))
     return mmlu_df
 
+
 def preview_status(): # NEW
     """Print a preview of the current statu """
     print("\n" + "="*55)
@@ -110,6 +115,7 @@ def preview_status(): # NEW
     print("="*55)
 
     all_done = True
+    resume_point = None
 
     for top_vt in TOP_VECTOR_TYPES:
         top_best_vt_file = f"{LOCAL_BEST_LAYERS_DIR}/{top_vt}.csv"
@@ -126,6 +132,7 @@ def preview_status(): # NEW
             axis = row['axis']
             vt = row['vt']
             csv_name = f"{axis}_{vt}.csv"
+            layer = row['max_layer']
 
             found_path = None
             if args.colab:
@@ -143,6 +150,10 @@ def preview_status(): # NEW
             if found_path is None:
                 print(f"  ✗ {axis:15s} ({vt})  →  not initialized")
                 all_done = False
+                resume_point = {
+                    'top_vt': top_vt, 'axis': axis, 'vt': vt,
+                    'layer': layer, 'done': 0
+                }
             else:
                 df = pd.read_csv(found_path)
                 done = len(df)
@@ -151,12 +162,19 @@ def preview_status(): # NEW
                 else:
                     print(f"  ○ {axis:15s} ({vt})  →  partial ({done}/21)") #…
                     all_done = False
+                    if resume_point is None:  # NEW
+                        resume_point = {
+                            'top_vt': top_vt, 'axis': axis, 'vt': vt,
+                            'layer': layer, 'done': done
+                        }
 
     print("\n" + "="*55)
     if all_done:
         print("All axes calculated :)")
     else:
-        print("Resuming operations...")
+        rp = resume_point
+        print(f"Resuming operations from: {rp['axis']} ({rp['vt']}, {rp['top_vt']}), "
+              f"layer {rp['layer']}  →  {rp['done']}/21 coefficients done")
     print("="*55 + "\n")
     return all_done
 
