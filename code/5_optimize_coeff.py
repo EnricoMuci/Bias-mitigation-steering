@@ -173,7 +173,7 @@ def preview_status(): # NEW
         print("All axes calculated :)")
     else:
         rp = resume_point
-        print(f"Resuming operations from: {rp['axis']} ({rp['vt']}, {rp['top_vt']}), "
+        print(f"Resuming operations from: \n{rp['axis']} ({rp['vt']}, {rp['top_vt']})\n"
               f"layer {rp['layer']}  →  {rp['done']}/21 coefficients done")
     print("="*55 + "\n")
     return all_done
