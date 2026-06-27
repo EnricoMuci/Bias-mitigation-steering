@@ -74,5 +74,5 @@ def create_minimal_age_layer_graph(axis):
 
 
 if __name__ == "__main__":
-    for axis in ['age', 'appearance', 'gender']:
+    for axis in ['age', 'appearance', 'gender']: # TODO: completare gli assi
         create_minimal_age_layer_graph(axis)
