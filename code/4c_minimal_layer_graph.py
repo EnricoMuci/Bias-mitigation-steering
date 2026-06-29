@@ -62,7 +62,7 @@ def create_minimal_age_layer_graph(axis):
 
     # Save in the main figs directory
     figs_path = '../figs'
-    minimal_path = os.path.join(figs_path, 'minimal_graph')
+    minimal_path = os.path.join(figs_path, '4c-minimal-graph')
     os.makedirs(minimal_path, exist_ok=True)
     plt.savefig(f'{minimal_path}/{axis}_minimal_layers.pdf', dpi=300, bbox_inches='tight')
     plt.savefig(f'{minimal_path}/{axis}_minimal_layers.svg', dpi=300, bbox_inches='tight')
