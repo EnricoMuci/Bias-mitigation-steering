@@ -4,7 +4,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-# from utils import bbq_axes
+from utils import bbq_axes
 
 
 def create_minimal_age_layer_graph(axis):
@@ -74,5 +74,5 @@ def create_minimal_age_layer_graph(axis):
 
 
 if __name__ == "__main__":
-    for axis in ['age', 'appearance', 'gender']: # TODO: completare gli assi
+    for axis in bbq_axes:
         create_minimal_age_layer_graph(axis)
