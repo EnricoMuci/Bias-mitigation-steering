@@ -1,0 +1,6 @@
+,axis,vt,max_acc,max_layer
+0,age,train+prompt,0.52,14
+1,appearance,train+prompt,0.577,13
+2,disability,train+prompt,0.563,14
+3,gender,train+prompt,0.523,14
+4,nationality,train+prompt,0.467,13
