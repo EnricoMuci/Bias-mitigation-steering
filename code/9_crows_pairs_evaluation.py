@@ -83,7 +83,7 @@ def predict_crows_pairs_row(row, model, vector, coeff, tokenizer, use_fairness_p
     })
 
 
-def run_crows_pairs_evaluation(model, vector, coeff, axis, tokenizer, use_fairness_prompt=False, use_self_debias=False):
+def run_crows_pairs_evaluation(model, vector, coeff, axis, tokenizer, use_fairness_prompt=False):
     """Run evaluation on CrowS-Pairs dataset for a specific axis."""
     
     print(f"Running CrowS-Pairs evaluation for axis: {axis}")
@@ -141,5 +141,3 @@ def run_crows_pairs_evaluation(model, vector, coeff, axis, tokenizer, use_fairne
     print(f"  Stereo cases bias score: {stereo_bias_score:.3f} ({len(stereo_cases)} pairs)")
     print(f"  Antistereo cases bias score: {antistereo_bias_score:.3f} ({len(antistereo_cases)} pairs)")
     return results
-
-

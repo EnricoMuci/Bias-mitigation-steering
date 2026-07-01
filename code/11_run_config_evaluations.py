@@ -45,8 +45,7 @@ def run_evaluations_for_config(config_file):
     print(f"Loaded {len(config_df)} configurations")
     
     results = []
-    
-    # Aggiunto TQDM per monitorare il ciclo principale delle configurazioni (position=0 per tenerlo in alto)
+
     for _, config_row in tqdm(config_df.iterrows(), total=len(config_df), desc="Total Configs Progress", position=0):
         axis = config_row['axis']
         vector_type = config_row['vector_type']
@@ -168,8 +167,7 @@ def setup_logging():
     # Redirect print statements to logging
     class PrintToLog:
         def write(self, text):
-            # TQDM usa '\r' per aggiornare la barra sulla stessa riga. 
-            # Le stampiamo a schermo (sys.__stderr__) ma non le salviamo nel file log!
+
             if '\r' in text:
                 sys.__stderr__.write(text)
                 sys.__stderr__.flush()
