@@ -109,7 +109,7 @@ def old_prepare_MMLU():
 
 
 def prepare_MMLU():
-    mmlu_dir = "../data/mmlu"
+    mmlu_dir = "../raw_data/mmlu"
     mmlu_path = f"{mmlu_dir}/mmlu_all_test.parquet"
 
     if os.path.exists(mmlu_path):
