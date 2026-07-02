@@ -95,7 +95,7 @@ def check_paths():
         return False
 
 
-def prepare_MMLU():
+def old_prepare_MMLU():
     print("\nLoading MMLU dataset...")
     mmlu = load_dataset("cais/mmlu", "all", split="test")
     print("\nProcessing MMLU dataset...")
@@ -108,8 +108,40 @@ def prepare_MMLU():
     return mmlu_df
 
 
+def prepare_MMLU():
+    mmlu_dir = "../data/mmlu"
+    mmlu_path = f"{mmlu_dir}/mmlu_all_test.parquet"
+
+    if os.path.exists(mmlu_path):
+        print(f"\nLoading MMLU dataset from local cache: {mmlu_path}")
+        full_df = pd.read_parquet(mmlu_path)
+    else:
+        print(f"\nLocal MMLU file not found ({mmlu_path}). Attempting download...")
+        try:
+            mmlu = load_dataset("cais/mmlu", "all", split="test")
+        except Exception as err:
+            raise RuntimeError(
+                f"Could not load MMLU locally and download failed "
+                f"(offline mode or no network access?). "
+                f"Place a pre-downloaded file at {mmlu_path} and retry.\n"
+                f"Original error: {err}"
+            )
+        full_df = pd.DataFrame(mmlu)
+        os.makedirs(mmlu_dir, exist_ok=True)
+        full_df.to_parquet(mmlu_path)
+        print(f"Saved MMLU dataset locally for future runs: {mmlu_path}")
+
+    print("\nProcessing MMLU dataset...")
+
+    mmlu_df = (
+        full_df.groupby('subject').sample(n=1000 // full_df['subject'].nunique(), random_state=42).reset_index(drop=True)
+    )
+    print(len(mmlu_df))
+    return mmlu_df
+
+
 def preview_status(): # NEW
-    """Print a preview of the current statu """
+    """Print a preview of the current status"""
     print("\n" + "="*55)
     print("PRE-RUN STATUS CHECK")
     print("="*55)
