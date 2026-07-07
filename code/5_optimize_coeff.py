@@ -182,10 +182,11 @@ def preview_status(): # NEW
             if found_path is None:
                 print(f"  ✗ {axis:15s} ({vt})  →  not initialized")
                 all_done = False
-                resume_point = {
-                    'top_vt': top_vt, 'axis': axis, 'vt': vt,
-                    'layer': layer, 'done': 0
-                }
+                if resume_point is None:
+                    resume_point = {
+                        'top_vt': top_vt, 'axis': axis, 'vt': vt,
+                        'layer': layer, 'done': 0
+                    }
             else:
                 df = pd.read_csv(found_path)
                 done = len(df)
