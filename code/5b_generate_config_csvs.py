@@ -25,6 +25,7 @@ def generate_config_csvs():
         axes = args.axes.copy()  # list type
     else:
         axes = bbq_axes # all BBQ  axes from utils
+    print(f'\n{len(axes)}configurations to be processed: {axes}\n')
 
     # Get all folders in coeff_scores/mistral
     top_VT_dirs = [d for d in os.listdir(f'../data/coeff_scores/{model_short_name}') if
@@ -35,12 +36,14 @@ def generate_config_csvs():
     os.makedirs('../data/configs', exist_ok=True)
 
     for top_vt in top_VT_dirs:
-        print(f"Processing folder: {top_vt}")
+        print(f"\nProcessing folder: {top_vt}")
 
         config_data = []
 
         for axis in axes:
+            print(f'Processing axis: {axis}')
             # Load the corresponding best layers file
+
             best_layers_file = f"../data/layer_scores/mistral/best_layers/{top_vt}.csv"
             if os.path.exists(best_layers_file):
                 best_layers_df = pd.read_csv(best_layers_file)
@@ -57,8 +60,8 @@ def generate_config_csvs():
                 vector_type = None
 
             # Find CSV files for this axis in this folder
-            csv_pattern = f"../data/coeff_scores/mistral/{top_vt}/{axis}_*.csv"
-            csv_files = glob.glob(csv_pattern)
+            coeff_csv = f"../data/coeff_scores/mistral/{top_vt}/{axis}_*.csv"
+            csv_files = glob.glob(coeff_csv)
 
             if csv_files and layer is not None:
                 # Process the CSV file for this axis
@@ -76,6 +79,8 @@ def generate_config_csvs():
                         'bbq_accuracy': max_bbq_row['bbq_accuracy'],
                         'mmlu_accuracy': max_bbq_row['mmlu_accuracy']
                     })
+
+                    print(f'\n{axis} configuration has been correctly processed')
 
         # Save config CSV for this folder
         if config_data:
