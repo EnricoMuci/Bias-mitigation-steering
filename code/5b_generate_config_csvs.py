@@ -80,7 +80,7 @@ def generate_config_csvs():
                         'mmlu_accuracy': max_bbq_row['mmlu_accuracy']
                     })
 
-                    print(f'\n{axis} configuration has been correctly processed')
+                    print(f'{axis} configuration has been correctly processed\n')
 
         # Save config CSV for this folder
         if config_data:
