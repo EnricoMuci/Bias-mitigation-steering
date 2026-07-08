@@ -69,7 +69,7 @@ def create_minimal_age_layer_graph(axis):
     plt.savefig(f'{minimal_path}/{axis}_minimal_layers.png', dpi=300, bbox_inches='tight')
 
 
-    print(f"Minimal {axis} layer graph saved as {axis}_minimal_layers.pdf, .svg, and .png")
+    print(f"\nMinimal {axis} layer graph saved as {axis}_minimal_layers.pdf, .svg, and .png")
     plt.show()
 
 
