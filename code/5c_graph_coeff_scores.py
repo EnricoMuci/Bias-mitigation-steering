@@ -179,7 +179,7 @@ def create_minimal_appearance_graph():
 
 def create_averaged_coeff_graph():
     """Create a coefficient graph averaging BBQ and MMLU across all 8 axes."""
-    print("Creating averaged coefficient graph across all axes...")
+    print("\nCreating averaged coefficient graph across all axes...")
     
     # Define bias axes
     # axes = ['age', 'appearance', 'disability', 'gender', 'nationality', 'race', 'religion', 'socioeconomic']
@@ -256,7 +256,7 @@ def generate_coeff_visualizations():
 
     
     # Create output directory
-    os.makedirs("../figs/coeffs", exist_ok=True)
+    os.makedirs("../figs/5c-coeffs", exist_ok=True)
     
     # Create 2x4 grid for 8 axes
     fig, axes_grid = plt.subplots(2, 4, figsize=(16, 8))
@@ -266,7 +266,7 @@ def generate_coeff_visualizations():
     
     # Process each axis
     for idx, axis in enumerate(axes):
-        print(f"Processing {axis}...")
+        print(f"\nProcessing {axis}...")
         
         # Load data
         df = load_coeff_scores(axis)
@@ -290,10 +290,10 @@ def generate_coeff_visualizations():
     print(f"  - {svg_path}")
     
     # Also create standalone appearance graph
-    create_single_axis_graph('appearance')
+    #create_single_axis_graph('appearance')
     
     # Also create minimal appearance graph
-    create_minimal_appearance_graph()
+    #create_minimal_appearance_graph()
     
     # Also create averaged coefficient graph
     create_averaged_coeff_graph()
