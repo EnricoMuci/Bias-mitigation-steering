@@ -25,9 +25,19 @@ USE_SELF_DEBIAS = True    # Set to True to enable self-debiasing
 
 # ARGUMENTS
 parser = argparse.ArgumentParser()
-parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1', help= 'model name')  # model name
-parser.add_argument('-p', '--path', type=str, default=None, help= 'model path')  #
-#parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
+parser.add_argument('-p', '--path', type=str, default=None)  # model path
+parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
+parser.add_argument('--configs', nargs='*', type=str, default=['baselines'],
+                     help="Names (without .csv) of config files under ../data/configs/ to run, "
+                          "e.g. --configs baselines top_train top_train+prompt. "
+                          "Default: baselines only (previous behavior).")
+parser.add_argument('--datasets', nargs='*', type=str,
+                     choices=['bbq', 'mmlu', 'stereoset', 'crows', 'clear_bias'],
+                     default=['bbq', 'mmlu', 'stereoset'],
+                     help="Which evaluation datasets to run, e.g. --datasets bbq mmlu. "
+                          "Default: bbq mmlu stereoset (matches the previous hardcoded "
+                          "behavior; crows and clear_bias were disabled in the original script).")
 args = parser.parse_args()
 
 (model_name, model_path) = new_get_args([args.name, args.path])
@@ -80,42 +90,56 @@ def run_evaluations_for_config(config_file):
         }
         
         # Call evaluation functions with model, vector, and axis
-        try:
-            print("    Running BBQ evaluation...")
-            bbq_result = bbq_eval.run_bbq_evaluation(
-                model, vector, coeff, axis, tokenizer, USE_FAIRNESS_PROMPT, USE_SELF_DEBIAS
-            )
-            print("      BBQ evaluation completed")
-            # Add BBQ results with prefix
-            if bbq_result:
-                for key, value in bbq_result.items():
-                    if key != 'axis':  # Don't duplicate axis
-                        result_row[f'bbq_{key}'] = value
-        except Exception as e:
-            print(f"      Error in BBQ evaluation: {e}")
-        
-        try:
-            print("    Running MMLU evaluation...")
-            mmlu_result = mmlu_eval.run_mmlu_evaluation(
-                model, vector, coeff, axis, tokenizer, USE_FAIRNESS_PROMPT, USE_SELF_DEBIAS
-            )
-            print("      MMLU evaluation completed")
-            # Add MMLU results with prefix
-            if mmlu_result:
-                for key, value in mmlu_result.items():
-                    if key not in ['axis', 'coeff']:  # Don't duplicate these
-                        result_row[f'mmlu_{key}'] = value
-        except Exception as e:
-            print(f"      Error in MMLU evaluation: {e}")
-        
-        # Only run bias evaluations for relevant axes
+        if 'bbq' in args.datasets:
+            try:
+                print("    Running BBQ evaluation...")
+                bbq_result = bbq_eval.run_bbq_evaluation(
+                    model, vector, coeff, axis, tokenizer, USE_FAIRNESS_PROMPT, USE_SELF_DEBIAS
+                )
+                print("      BBQ evaluation completed")
+                # Add BBQ results with prefix
+                if bbq_result:
+                    for key, value in bbq_result.items():
+                        if key != 'axis':  # Don't duplicate axis
+                            result_row[f'bbq_{key}'] = value
+            except Exception as e:
+                print(f"      Error in BBQ evaluation: {e}")
+        else:
+            print("    Skipping BBQ evaluation (dataset not selected)")
+            result_row['bbq_skipped'] = True
+
+        if 'mmlu' in args.datasets:
+            try:
+                print("    Running MMLU evaluation...")
+                mmlu_result = mmlu_eval.run_mmlu_evaluation(
+                    model, vector, coeff, axis, tokenizer, USE_FAIRNESS_PROMPT, USE_SELF_DEBIAS
+                )
+                print("      MMLU evaluation completed")
+                # Add MMLU results with prefix
+                if mmlu_result:
+                    for key, value in mmlu_result.items():
+                        if key not in ['axis', 'coeff']:  # Don't duplicate these
+                            result_row[f'mmlu_{key}'] = value
+            except Exception as e:
+                print(f"      Error in MMLU evaluation: {e}")
+        else:
+            print("    Skipping MMLU evaluation (dataset not selected)")
+            result_row['mmlu_skipped'] = True
+
+        # Only run bias evaluations for relevant axes AND selected datasets.
+        # prefix values ('stereoset', 'crows', 'clear_bias') match the
+        # --datasets choices directly, so we filter on prefix below.
         bias_evaluations = [
             ("StereoSet", stereoset_eval.run_stereoset_evaluation, ['gender', 'race', 'religion'], 'stereoset'),
-            #("CrowS-Pairs", crows_eval.run_crows_pairs_evaluation, ['gender', 'race', 'religion', 'age', 'nationality', 'socioeconomic', 'appearance', 'disability'], 'crows'),
-            #("Clear Bias", clear_bias_eval.run_clear_bias_evaluation, ['gender', 'race', 'age', 'disability', 'religion', 'socioeconomic'], 'clear_bias')
+            ("CrowS-Pairs", crows_eval.run_crows_pairs_evaluation, ['gender', 'race', 'religion', 'age', 'nationality', 'socioeconomic', 'appearance', 'disability'], 'crows'),
+            ("Clear Bias", clear_bias_eval.run_clear_bias_evaluation, ['gender', 'race', 'age', 'disability', 'religion', 'socioeconomic'], 'clear_bias')
         ]
         
         for eval_name, eval_func, relevant_axes, prefix in bias_evaluations:
+            if prefix not in args.datasets:
+                print(f"    Skipping {eval_name} evaluation (dataset not selected)")
+                result_row[f'{prefix}_skipped'] = True
+                continue
             if axis in relevant_axes:
                 try:
                     print(f"    Running {eval_name} evaluation...")
@@ -183,22 +207,28 @@ def setup_logging():
 
 
 def main():
-    """Run evaluations for baseline config file only."""
+    """Run evaluations for the config files requested via --configs
+    (defaults to baselines only, matching the previous hardcoded behavior)."""
     log_file = setup_logging()
     print(f"Logging to: {log_file}")
     print(f"Fairness prompting enabled: {USE_FAIRNESS_PROMPT}")
     print(f"Self-debiasing enabled: {USE_SELF_DEBIAS}")
-    
-    # Only run on baseline config file
-    baseline_config = "../data/configs/baselines.csv"
-    
-    if not os.path.exists(baseline_config):
-        raise FileNotFoundError(f"Baseline config file not found: {baseline_config}")
-    
-    print(f"Running evaluations for baseline config only: {baseline_config}")
-    run_evaluations_for_config(baseline_config)
-    
-    print("\nBaseline evaluations complete!")
+    print(f"Configs requested: {args.configs}")
+
+    missing = []
+    for config_name in args.configs:
+        config_file = f"../data/configs/{config_name}.csv"
+        if not os.path.exists(config_file):
+            print(f"  Config file not found, skipping: {config_file}")
+            missing.append(config_name)
+            continue
+
+        print(f"\nRunning evaluations for config file: {config_file}")
+        run_evaluations_for_config(config_file)
+
+    if missing:
+        print(f"\nSkipped missing configs: {missing}")
+    print("\nAll requested evaluations complete!")
 
 
 if __name__ == "__main__":
