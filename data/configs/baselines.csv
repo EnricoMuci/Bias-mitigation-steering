@@ -1,3 +1,9 @@
 axis,vector_type,layer,coeff,bbq_accuracy,mmlu_accuracy
-age,train+prompt,14,0,0.63,0.451
-appearance,train+prompt,13,0,0.6,0.478
+age,train+prompt,14,0,0.397,0.485
+appearance,train+prompt,13,0,0.533,0.485
+disability,train+prompt,14,0,0.49,0.485
+gender,train+prompt,14,0,0.453,0.485
+nationality,train+prompt,13,0,0.407,0.485
+race,train+prompt,14,0,0.47,0.485
+religion,train+prompt,3,0,0.557,0.485
+socioeconomic,train+prompt,14,0,0.507,0.485
