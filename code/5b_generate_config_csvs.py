@@ -92,6 +92,84 @@ def generate_config_csvs():
             print(f"  No data found for folder {top_vt}")
 
 
+def generate_baseline_csv():
+    """Generate the baselines.csv config by pulling the coeff=0 row out of
+    each axis' coefficient sweep (5_optimize_coeff.py output), instead of
+    picking the max bbq_accuracy row like generate_config_csvs() does.
+
+    The original baselines.csv always uses the "train+prompt" vector type
+    for every axis. This is arbitrary (coeff=0 nullifies the steering
+    vector's effect entirely), but we mirror it here for reproducibility.
+    """
+    BASELINE_TOP_VT = "top_train+prompt"
+
+    if args.axes is not None:
+        axes = args.axes.copy()
+    else:
+        axes = bbq_axes
+    print(f'\n{len(axes)} axes to be processed for baseline: {axes}\n')
+
+    best_layers_file = f"../data/layer_scores/mistral/best_layers/{BASELINE_TOP_VT}.csv"
+    if not os.path.exists(best_layers_file):
+        print(f"Missing best layers file: {best_layers_file}. Skipping baseline generation.")
+        return
+    best_layers_df = pd.read_csv(best_layers_file)
+
+    config_data = []
+
+    for axis in axes:
+        print(f'Processing axis: {axis}')
+
+        axis_row = best_layers_df[best_layers_df['axis'] == axis]
+        if axis_row.empty:
+            print(f'  No best-layer entry for {axis} in {BASELINE_TOP_VT}, skipping.')
+            continue
+
+        layer = axis_row.iloc[0]['max_layer']
+        vector_type = axis_row.iloc[0]['vt']  # should be 'train+prompt'
+
+        coeff_csv_pattern = f"../data/coeff_scores/mistral/{BASELINE_TOP_VT}/{axis}_*.csv"
+        csv_files = glob.glob(coeff_csv_pattern)
+
+        if not csv_files:
+            print(f'  No coeff-score file found for {axis} (pattern: {coeff_csv_pattern}), skipping.')
+            continue
+
+        csv_file = csv_files[0]
+        df = pd.read_csv(csv_file)
+        if df.empty:
+            print(f'  Empty coeff-score file for {axis}, skipping.')
+            continue
+
+        baseline_rows = df[df['coeff'].round(1) == 0.0]
+        if baseline_rows.empty:
+            print(f'  No coeff=0 row found for {axis} in {csv_file}, skipping.')
+            continue
+
+        baseline_row = baseline_rows.iloc[0]
+
+        config_data.append({
+            'axis': axis,
+            'vector_type': vector_type,
+            'layer': layer,
+            'coeff': 0,
+            'bbq_accuracy': baseline_row['bbq_accuracy'],
+            'mmlu_accuracy': baseline_row['mmlu_accuracy']
+        })
+
+        print(f'{axis} baseline correctly processed\n')
+
+    if config_data:
+        os.makedirs('../data/configs', exist_ok=True)
+        config_df = pd.DataFrame(config_data)
+        config_file = "../data/configs/baselines.csv"
+        config_df.to_csv(config_file, index=False)
+        print(f"  Saved {len(config_data)} baseline configs to {config_file}")
+    else:
+        print("  No baseline data produced.")
+
+
 if __name__ == "__main__":
+    generate_baseline_csv()
     generate_config_csvs()
     print("\nConfig CSV generation complete!")
