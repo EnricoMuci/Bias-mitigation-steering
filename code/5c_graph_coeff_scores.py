@@ -285,7 +285,7 @@ def generate_coeff_visualizations():
     fig.savefig(svg_path, bbox_inches='tight', dpi=300)
     plt.close(fig)
     
-    print("Combined visualizations saved:")
+    print("\nCombined visualizations saved:")
     print(f"  - {pdf_path}")
     print(f"  - {svg_path}")
     
