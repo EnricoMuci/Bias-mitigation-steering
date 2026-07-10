@@ -44,7 +44,7 @@ def generate_config_csvs():
             print(f'Processing axis: {axis}')
             # Load the corresponding best layers file
 
-            best_layers_file = f"../data/layer_scores/mistral/best_layers/{top_vt}.csv"
+            best_layers_file = f"../data/layer_scores/{model_short_name}/best_layers/{top_vt}.csv"
             if os.path.exists(best_layers_file):
                 best_layers_df = pd.read_csv(best_layers_file)
                 # Find the row for this axis
@@ -60,7 +60,7 @@ def generate_config_csvs():
                 vector_type = None
 
             # Find CSV files for this axis in this folder
-            coeff_csv = f"../data/coeff_scores/mistral/{top_vt}/{axis}_*.csv"
+            coeff_csv = f"../data/coeff_scores/{model_short_name}/{top_vt}/{axis}_*.csv"
             csv_files = glob.glob(coeff_csv)
 
             if csv_files and layer is not None:
