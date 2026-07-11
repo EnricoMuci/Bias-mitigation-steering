@@ -135,7 +135,7 @@ def run_evaluations_for_config(config_file):
         # Run every evaluation selected via --evals, in registry order
         for eval_key in EVAL_REGISTRY:
             if eval_key not in args.evals:
-                continue
+                continue # skip this specific dataset
 
             eval_info = EVAL_REGISTRY[eval_key]
             relevant_axes = eval_info['relevant_axes']  # None = all axes
