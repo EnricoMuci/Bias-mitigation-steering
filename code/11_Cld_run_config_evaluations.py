@@ -78,7 +78,7 @@ parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
 parser.add_argument('-e', '--evals', nargs='*', choices=list(EVAL_REGISTRY.keys()),
                      default=list(EVAL_REGISTRY.keys()),
-                     help='Which evaluations to run (default: all). E.g. --evals bbq mmlu')
+                     help='Which datasets evaluations to run (default: all). E.g. --evals bbq mmlu')
 parser.add_argument('--config', type=str, default=None,
                      help='Path to a single config CSV to evaluate. Default: every *.csv in ../data/configs/')
 args = parser.parse_args()
