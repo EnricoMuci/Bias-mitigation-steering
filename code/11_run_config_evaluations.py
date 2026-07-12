@@ -7,9 +7,9 @@ import logging
 from datetime import datetime
 from tqdm import tqdm
 import torch
-from dialz import SteeringModel, SteeringVector
+from dialz import SteeringVector
 
-from utils_new import new_get_args, get_model_short_name, define_custom_tokenizer
+from utils_new import new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model
 
 # Import functions from the individual evaluation files
 # Note: Using importlib because Python module names can't start with numbers
@@ -78,7 +78,7 @@ USE_SELF_DEBIAS = True  # Set to True to enable self-debiasing
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
-# parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
+parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
 parser.add_argument('-e', '--evals', nargs='*', choices=list(EVAL_REGISTRY.keys()),
                     default=list(EVAL_REGISTRY.keys()),
                     help='Which evaluations to run (default: all). E.g. --evals bbq mmlu')
@@ -157,9 +157,8 @@ def run_evaluations_for_config(config_file):
             print(f"    Skipping {axis}: Vector file not found at {vector_path}")
             continue
 
-        # Load model and vector for this configuration
-        model = SteeringModel(model_name, [layer])
-        model.half()
+        # Load model and vector for this configuration.
+        model = create_quantized_model(model_name, model_path, layer_ids=[layer])
         vector = SteeringVector.import_gguf(vector_path)
 
         # Initialize result row with config data
@@ -198,11 +197,11 @@ def run_evaluations_for_config(config_file):
                 print(f"      Error in {eval_info['display_name']} evaluation: {e}")
                 result_row[f"{eval_info['prefix']}_error"] = str(e)
 
-        # Checkpoint 
+        # Checkpoint
         checkpoint(result_row)
         print(f"    Checkpoint saved for axis '{axis}' -> {results_file}")
 
-        # Free the model/vector before loading the next one.
+        # Free the model/vector before loading the next one
         del model
         del vector
         gc.collect()
