@@ -133,6 +133,26 @@ def create_quantized_model(model_name, model_path, layer_ids=None):
         return SteeringModel(model_path, [5])  # Second element is arbritary as we're not generating yet
 
 
+def set_steering_layer(model, layer_id):
+    """Rewrap an already-loaded QuantizedSteeringModel so SteeringModule is
+    active on `layer_id`, unwrapping any previously-active layer first.
+    """
+    layers = model_layer_list(model.model)
+    layer_id = layer_id if layer_id >= 0 else len(layers) + layer_id
+
+    prev_id = getattr(model, "_active_steering_layer_id", None)
+    if prev_id is not None and prev_id != layer_id and isinstance(layers[prev_id], SteeringModule):
+        layers[prev_id] = layers[prev_id].block  # restore the original, unwrapped layer
+
+    if not isinstance(layers[layer_id], SteeringModule):
+        with torch.no_grad():
+            layers[layer_id] = SteeringModule(layers[layer_id])
+
+    model.layer_ids = [layer_id]
+    model._active_steering_layer_id = layer_id
+    return model
+
+
 def define_custom_tokenizer(model_name: str, model_path: str = None) -> AutoTokenizer:
     if model_path is not None:  # custom tokenizer
         tokenizer = AutoTokenizer.from_pretrained(model_path)  # Loaded model
