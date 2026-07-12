@@ -9,7 +9,8 @@ from tqdm import tqdm
 import torch
 from dialz import SteeringVector
 
-from utils_new import new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model
+from utils_new import new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model, \
+    set_steering_layer
 
 # Import functions from the individual evaluation files
 # Note: Using importlib because Python module names can't start with numbers
@@ -94,7 +95,8 @@ tokenizer = define_custom_tokenizer(model_name, model_path)
 
 def _eval_already_done(existing_df, axis, eval_key):
     """Check whether a specific evaluation already has a saved result for
-    this axis"""
+    this axis (used to resume after an interruption without recomputing
+    evaluations that already succeeded)."""
     if existing_df is None or axis not in existing_df.index:
         return False
     row = existing_df.loc[axis]
@@ -105,8 +107,13 @@ def _eval_already_done(existing_df, axis, eval_key):
     return any(pd.notna(row.get(c)) for c in matching_cols)
 
 
-def run_evaluations_for_config(config_file):
-    """Run all evaluations for a given config file by calling functions from individual files."""
+def run_evaluations_for_config(config_file, model):
+    """Run all evaluations for a given config file by calling functions from individual files.
+
+    `model` is a single QuantizedSteeringModel instance, loaded once by the
+    caller and reused across every axis/config file: only the steered layer
+    is swapped between axes (see set_steering_layer), not the whole model.
+    """
     config_name = os.path.basename(config_file).replace('.csv', '')
     print(f"\nRunning evaluations for config: {config_name}")
 
@@ -124,7 +131,9 @@ def run_evaluations_for_config(config_file):
               f"already-completed evaluations will be skipped.")
 
     def checkpoint(row):
-        """Merge one axis' result into the results file on disk immediately"""
+        """Merge one axis' result into the results file on disk immediately,
+        so an interrupted job (SLURM time limit, OOM...) only loses the axis
+        currently in progress, not the whole config file."""
         nonlocal existing_df
         new_df = pd.DataFrame([row]).set_index('axis', drop=False)
         if existing_df is not None:
@@ -157,8 +166,9 @@ def run_evaluations_for_config(config_file):
             print(f"    Skipping {axis}: Vector file not found at {vector_path}")
             continue
 
-        # Load model and vector for this configuration.
-        model = create_quantized_model(model_name, model_path, layer_ids=[layer])
+        # Reuse the already-loaded model: just swap which layer is wrapped
+        # in SteeringModule, instead of reloading the whole 7B model.
+        set_steering_layer(model, layer)
         vector = SteeringVector.import_gguf(vector_path)
 
         # Initialize result row with config data
@@ -197,12 +207,13 @@ def run_evaluations_for_config(config_file):
                 print(f"      Error in {eval_info['display_name']} evaluation: {e}")
                 result_row[f"{eval_info['prefix']}_error"] = str(e)
 
-        # Checkpoint
+        # Checkpoint right away: this axis is now safe on disk even if the
+        # job dies on the very next one.
         checkpoint(result_row)
         print(f"    Checkpoint saved for axis '{axis}' -> {results_file}")
 
-        # Free the model/vector before loading the next one
-        del model
+        # Free only the vector — the model stays loaded and gets reused by
+        # the next axis via set_steering_layer().
         del vector
         gc.collect()
         if torch.cuda.is_available():
@@ -268,11 +279,18 @@ def main():
 
     print(f"Config files to process: {config_files}")
 
+    # Load the quantized model once for the entire run (all config files,
+    # all axes). layer_ids=[] means no layer is wrapped yet -- the first
+    # call to set_steering_layer() inside run_evaluations_for_config wraps
+    # whichever layer the first axis needs.
+    print("Loading base quantized model...")
+    model = create_quantized_model(model_name, model_path, layer_ids=[])
+
     for config_file in config_files:
         print(f"\n{'=' * 60}")
         print(f"Config file: {config_file}")
         print('=' * 60)
-        run_evaluations_for_config(config_file)
+        run_evaluations_for_config(config_file, model)
 
     print("\nAll evaluations complete!")
 
