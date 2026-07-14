@@ -1,13 +1,15 @@
 import argparse
 import sys
 import os
+import gc
 import pandas as pd
 import logging
 from datetime import datetime
 from tqdm import tqdm
-from dialz import SteeringModel, SteeringVector
+import torch
+from dialz import SteeringVector
 
-from utils_new import new_get_args, get_model_short_name, define_custom_tokenizer
+from utils_new import new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model, set_steering_layer
 
 # Import functions from the individual evaluation files
 # Note: Using importlib because Python module names can't start with numbers
@@ -78,7 +80,7 @@ parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
 parser.add_argument('-e', '--evals', nargs='*', choices=list(EVAL_REGISTRY.keys()),
                      default=list(EVAL_REGISTRY.keys()),
-                     help='Which datasets evaluations to run (default: all). E.g. --evals bbq mmlu')
+                     help='Which evaluations to run (default: all). E.g. --evals bbq mmlu')
 parser.add_argument('--config', type=str, default=None,
                      help='Path to a single config CSV to evaluate. Default: every *.csv in ../data/configs/')
 args = parser.parse_args()
@@ -88,16 +90,60 @@ model_short_name = get_model_short_name(model_name)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
 
+def _eval_already_done(existing_df, axis, eval_key):
+    """Check whether a specific evaluation already has a saved result for
+    this axis (used to resume after an interruption without recomputing
+    evaluations that already succeeded)."""
+    if existing_df is None or axis not in existing_df.index:
+        return False
+    row = existing_df.loc[axis]
+    prefix = EVAL_REGISTRY[eval_key]['prefix']
+    matching_cols = [c for c in existing_df.columns if c.startswith(f"{prefix}_")]
+    if not matching_cols:
+        return False
+    return any(pd.notna(row.get(c)) for c in matching_cols)
+
+
 def run_evaluations_for_config(config_file):
-    """Run all evaluations for a given config file by calling functions from individual files."""
+    """Run all evaluations for a given config file by calling functions from individual files.
+
+    LEGACY VERSION for A/B comparison only: reloads the full quantized
+    model from scratch for every axis, instead of reusing a single loaded
+    model via set_steering_layer(). Slower, but structurally identical to
+    the version running before the model-reuse optimization.
+    """
     config_name = os.path.basename(config_file).replace('.csv', '')
     print(f"\nRunning evaluations for config: {config_name}")
-    
+
     # Load config
     config_df = pd.read_csv(config_file)
     print(f"Loaded {len(config_df)} configurations")
-    
-    results = []
+
+    os.makedirs(f"../results/{model_short_name}", exist_ok=True)
+    # Suffix "_legacy_test": solo per il confronto A/B, così questo script
+    # non scrive nel risultato canonico prodotto dalla versione nuova.
+    results_file = f"../results/{model_short_name}/{config_name}_legacy_test.csv"
+
+    existing_df = None
+    if os.path.exists(results_file):
+        existing_df = pd.read_csv(results_file).set_index('axis', drop=False)
+        print(f"Found existing results file ({len(existing_df)} rows) — resuming, "
+              f"already-completed evaluations will be skipped.")
+
+    def checkpoint(row):
+        """Merge one axis' result into the results file on disk immediately,
+        so an interrupted job (SLURM time limit, OOM...) only loses the axis
+        currently in progress, not the whole config file."""
+        nonlocal existing_df
+        new_df = pd.DataFrame([row]).set_index('axis', drop=False)
+        if existing_df is not None:
+            for col in new_df.columns:
+                existing_df.loc[new_df.index, col] = new_df[col]
+        else:
+            existing_df = new_df
+        existing_df.reset_index(drop=True).to_csv(results_file, index=False)
+
+    requested_evals = [e for e in EVAL_REGISTRY if e in args.evals]
 
     for _, config_row in tqdm(config_df.iterrows(), total=len(config_df), desc="Total Configs Progress", position=0):
         axis = config_row['axis']
@@ -106,8 +152,13 @@ def run_evaluations_for_config(config_file):
         coeff = config_row['coeff']
         bbq_accuracy = config_row['bbq_accuracy']
         mmlu_accuracy = config_row['mmlu_accuracy']
-        
-        print(f"\n  Processing {axis} (layer={layer}, coeff={coeff})...")
+
+        pending_evals = [e for e in requested_evals if not _eval_already_done(existing_df, axis, e)]
+        if not pending_evals:
+            print(f"\n  Skipping {axis}: all requested evaluations already completed (resumed).")
+            continue
+
+        print(f"\n  Processing {axis} (layer={layer}, coeff={coeff})... pending: {pending_evals}")
 
         # Check if vector file exists before proceeding
         vector_path = f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf'
@@ -115,9 +166,8 @@ def run_evaluations_for_config(config_file):
             print(f"    Skipping {axis}: Vector file not found at {vector_path}")
             continue
             
-        # Load model and vector for this configuration
-        model = SteeringModel(model_name, [layer])
-        model.half()
+        # Load model and vector for this configuration (fresh reload every axis).
+        model = create_quantized_model(model_name, model_path, layer_ids=[layer])
         vector = SteeringVector.import_gguf(vector_path)
         
         # Initialize result row with config data
@@ -132,11 +182,8 @@ def run_evaluations_for_config(config_file):
             'self_debias': USE_SELF_DEBIAS
         }
         
-        # Run every evaluation selected via --evals, in registry order
-        for eval_key in EVAL_REGISTRY:
-            if eval_key not in args.evals:
-                continue # skip this specific dataset
-
+        # Run every pending evaluation (already-completed ones were filtered out above)
+        for eval_key in pending_evals:
             eval_info = EVAL_REGISTRY[eval_key]
             relevant_axes = eval_info['relevant_axes']  # None = all axes
 
@@ -159,28 +206,21 @@ def run_evaluations_for_config(config_file):
                 print(f"      Error in {eval_info['display_name']} evaluation: {e}")
                 result_row[f"{eval_info['prefix']}_error"] = str(e)
 
-        results.append(result_row)
+        # Checkpoint right away: this axis is now safe on disk even if the
+        # job dies on the very next one.
+        checkpoint(result_row)
+        print(f"    Checkpoint saved for axis '{axis}' -> {results_file}")
 
-    # Save results to CSV, merging with any pre-existing file so that
-    # partial runs (e.g. --evals bbq, then later --evals stereoset) add /
-    # update columns instead of wiping out previously computed ones.
-    results_df = pd.DataFrame(results)
-    os.makedirs(f"../results/{model_short_name}", exist_ok=True)
-    results_file = f"../results/{model_short_name}/{config_name}.csv"
-
-    if os.path.exists(results_file) and not results_df.empty:
-        existing_df = pd.read_csv(results_file).set_index('axis')
-        new_df = results_df.set_index('axis')
-        for col in new_df.columns:
-            existing_df.loc[new_df.index, col] = new_df[col]
-        results_df = existing_df.reset_index()
-
-    results_df.to_csv(results_file, index=False)
+        # Free the model/vector before loading the next one.
+        del model
+        del vector
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     print(f"\nAll evaluations complete for config: {config_name}")
-    print(f"Evaluations run: {[e for e in EVAL_REGISTRY if e in args.evals]}")
+    print(f"Evaluations run: {requested_evals}")
     print(f"Results saved to {results_file}")
-    print(f"Saved {len(results_df)} rows with {len(results_df.columns)} columns")
 
 
 def setup_logging():
