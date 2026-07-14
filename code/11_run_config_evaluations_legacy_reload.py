@@ -9,7 +9,8 @@ from tqdm import tqdm
 import torch
 from dialz import SteeringVector
 
-from utils_new import new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model, set_steering_layer
+from utils_new import new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model, \
+    set_steering_layer
 
 # Import functions from the individual evaluation files
 # Note: Using importlib because Python module names can't start with numbers
@@ -46,7 +47,8 @@ EVAL_REGISTRY = {
     'crows': {
         'module_name': '9_crows_pairs_evaluation',
         'func_attr': 'run_crows_pairs_evaluation',
-        'relevant_axes': ['gender', 'race', 'religion', 'age', 'nationality', 'socioeconomic', 'appearance', 'disability'],
+        'relevant_axes': ['gender', 'race', 'religion', 'age', 'nationality', 'socioeconomic', 'appearance',
+                          'disability'],
         'prefix': 'crows',
         'display_name': 'CrowS-Pairs',
     },
@@ -71,7 +73,7 @@ def get_eval_module(eval_key):
 
 # Global configuration
 USE_FAIRNESS_PROMPT = False  # Set to True to enable fairness prompting
-USE_SELF_DEBIAS = True    # Set to True to enable self-debiasing
+USE_SELF_DEBIAS = True  # Set to True to enable self-debiasing
 
 # ARGUMENTS
 parser = argparse.ArgumentParser()
@@ -79,16 +81,17 @@ parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Inst
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
 parser.add_argument('-e', '--evals', nargs='*', choices=list(EVAL_REGISTRY.keys()),
-                     default=list(EVAL_REGISTRY.keys()),
-                     help='Which evaluations to run (default: all). E.g. --evals bbq mmlu')
+                    default=list(EVAL_REGISTRY.keys()),
+                    help='Which evaluations to run (default: all). E.g. --evals bbq mmlu')
 parser.add_argument('--config', type=str, default=None,
-                     help='Path to a single config CSV to evaluate. Default: every *.csv in ../data/configs/')
+                    help='Path to a single config CSV to evaluate. Default: every *.csv in ../data/configs/')
 args = parser.parse_args()
 
 (model_name, model_path) = new_get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
+
 
 def _eval_already_done(existing_df, axis, eval_key):
     """Check whether a specific evaluation already has a saved result for
@@ -165,11 +168,11 @@ def run_evaluations_for_config(config_file):
         if not os.path.exists(vector_path):
             print(f"    Skipping {axis}: Vector file not found at {vector_path}")
             continue
-            
+
         # Load model and vector for this configuration (fresh reload every axis).
         model = create_quantized_model(model_name, model_path, layer_ids=[layer])
         vector = SteeringVector.import_gguf(vector_path)
-        
+
         # Initialize result row with config data
         result_row = {
             'axis': axis,
@@ -181,7 +184,7 @@ def run_evaluations_for_config(config_file):
             'fairness_prompt': USE_FAIRNESS_PROMPT,
             'self_debias': USE_SELF_DEBIAS
         }
-        
+
         # Run every pending evaluation (already-completed ones were filtered out above)
         for eval_key in pending_evals:
             eval_info = EVAL_REGISTRY[eval_key]
@@ -228,7 +231,7 @@ def setup_logging():
     # Create timestamp for unique log file name
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     log_file = f"../logs/evaluation_run_{timestamp}.log"
-    
+
     # Set up logging configuration
     logging.basicConfig(
         level=logging.INFO,
@@ -238,7 +241,7 @@ def setup_logging():
             logging.StreamHandler(sys.stdout)  # Also show on console
         ]
     )
-    
+
     # Redirect print statements to logging
     class PrintToLog:
         def write(self, text):
@@ -248,12 +251,13 @@ def setup_logging():
                 sys.__stderr__.flush()
             elif text.strip():  # Only log non-empty lines
                 logging.info(text.strip())
+
         def flush(self):
             sys.__stderr__.flush()
-    
+
     sys.stdout = PrintToLog()
     sys.stderr = PrintToLog()
-    
+
     return log_file
 
 
