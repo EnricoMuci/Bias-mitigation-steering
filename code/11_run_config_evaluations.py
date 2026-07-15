@@ -133,14 +133,24 @@ def run_evaluations_for_config(config_file, model):
     def checkpoint(row):
         """Merge one axis' result into the results file on disk immediately,
         so an interrupted job (SLURM time limit, OOM...) only loses the axis
-        currently in progress, not the whole config file."""
+        currently in progress, not the whole config file.
+
+        NOTE: existing_df.loc[new_df.index, col] = ... (an Index, even of
+        length 1) raises KeyError when the label isn't present yet --
+        .loc only auto-creates rows for a *scalar* label, not a list-like
+        indexer. This is why earlier runs crashed on the second axis
+        checkpointed (the first hit the `existing_df is None` branch and
+        never exercised this path)."""
         nonlocal existing_df
-        new_df = pd.DataFrame([row]).set_index('axis', drop=False)
-        if existing_df is not None:
-            for col in new_df.columns:
-                existing_df.loc[new_df.index, col] = new_df[col]
+        axis_value = row['axis']
+        if existing_df is None:
+            existing_df = pd.DataFrame([row]).set_index('axis', drop=False)
+        elif axis_value in existing_df.index:
+            for key, value in row.items():
+                existing_df.loc[axis_value, key] = value
         else:
-            existing_df = new_df
+            new_row_df = pd.DataFrame([row]).set_index('axis', drop=False)
+            existing_df = pd.concat([existing_df, new_row_df])
         existing_df.reset_index(drop=True).to_csv(results_file, index=False)
 
     requested_evals = [e for e in EVAL_REGISTRY if e in args.evals]
@@ -283,7 +293,7 @@ def main():
     # all axes). layer_ids=[] means no layer is wrapped yet -- the first
     # call to set_steering_layer() inside run_evaluations_for_config wraps
     # whichever layer the first axis needs.
-    print("Loading base quantized model...")
+    print("Loading base quantized model (once for the whole run)...")
     model = create_quantized_model(model_name, model_path, layer_ids=[])
 
     for config_file in config_files:
