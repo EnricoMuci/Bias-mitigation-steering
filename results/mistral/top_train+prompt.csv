@@ -4,3 +4,6 @@ appearance,train+prompt,13,1.2,0.593,0.473,False,True,0.513,0.025,0.014,0.438,96
 disability,train+prompt,14,2.0,0.62,0.432,False,True,0.478,-0.014,-0.008,0.438,969,424
 gender,train+prompt,14,1.4,0.527,0.464,False,True,0.517,-0.079,-0.038,0.438,969,424
 nationality,train+prompt,13,2.0,0.563,0.438,False,True,0.535,0.267,0.163,0.438,969,424
+race,train+prompt,14,1.8,0.6,0.454,False,True,0.57,0.152,0.073,0.433,969,420
+religion,train+prompt,3,1.0,0.667,0.327,False,True,0.535,0.074,0.034,0.433,969,420
+socioeconomic,train+prompt,14,2.0,0.737,0.44,False,True,0.523,0.145,0.081,0.433,969,420
