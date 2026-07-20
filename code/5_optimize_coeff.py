@@ -51,7 +51,7 @@ else:
 
 LOCAL_BEST_LAYERS_DIR = f'../data/layer_scores/{model_short_name}/best_layers'
 LOCAL_BBQ_VALIDATE_DIR = f"../data/bbq_validate"  # 1 file for each axis
-LOCAL_COEFF_SCORES_DIR = f'../data/coeff_scores/{model_short_name}'
+LOCAL_COEFF_SCORES_DIR = f'../data/coeff_scores/{model_short_name}-{EXPERIMENT}'
 TOP_VECTOR_TYPES = ["top_train", "top_train+prompt"]
 
 

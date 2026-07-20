@@ -15,7 +15,7 @@ import os
 SEED = 42
 STRICT_QUANTIZATION = os.environ.get("STRICT_QUANTIZATION", "0") == "1"
 REMOTE_DRIVE_THESIS_PROJECT = '/content/drive/MyDrive/ThesisProject'
-EXPERIMENT = 'reproduced'  # or 'original
+EXPERIMENT = 'crows_injection'  # or 'original or 'reproduced'
 VECTOR_TYPES = ['train', 'train+prompt']
 
 CROWS_AXIS_MAP = {
