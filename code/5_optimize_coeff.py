@@ -363,10 +363,12 @@ def get_best_coeffs(mmlu_df=None):
             b_ratio = args.bias_ratio  # fraction of pro- stereotyped sentences
 
             try:  # Load in validation set
-                validation_df = pd.read_csv(f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_validate.csv")
-                crows_df = pd.read_csv("../raw_data/crows/crows_pairs.csv")
+                validation_df = pd.read_csv(f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_validate.csv") # validation samples
+                crows_df = pd.read_csv("../raw_data/crows/crows_pairs.csv") # Database for injections
 
-                injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k={k_sentences}_br={b_ratio}.csv"
+                # injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k={k_sentences}_br={b_ratio}.csv"
+
+                injected_cache = f"../cache/{axis}_injected_k={k_sentences}_b={b_ratio}.csv"
                 if os.path.exists(injected_cache):
                     validation_df = pd.read_csv(injected_cache)
                 else:
