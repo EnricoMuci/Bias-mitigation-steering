@@ -12,11 +12,22 @@ from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
 import utils
 import os
 
+SEED = 38
 STRICT_QUANTIZATION = os.environ.get("STRICT_QUANTIZATION", "0") == "1"
 REMOTE_DRIVE_THESIS_PROJECT = '/content/drive/MyDrive/ThesisProject'
 EXPERIMENT = 'reproduced'  # or 'original
 VECTOR_TYPES = ['train', 'train+prompt']
 
+CROWS_AXIS_MAP = {
+        'age': 'age',
+        'appearance': 'physical-appearance',
+        'disability': 'disability',
+        'gender': 'gender',
+        'nationality': 'nationality',
+        'race': 'race-color',
+        'religion': 'religion',
+        'socioeconomic': 'socioeconomic'
+    }
 
 def new_get_args(args_list: list):
     model_name = args_list[0]

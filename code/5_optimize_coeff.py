@@ -15,9 +15,9 @@ from dialz.vector import SteeringModule
 
 from utils import get_output
 from utils_new import (new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model,
-                       model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, EXPERIMENT)
+                       model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, CROWS_AXIS_MAP, EXPERIMENT, SEED)
 
-
+import random
 import warnings
 warnings.filterwarnings(
     "ignore",
@@ -212,16 +212,54 @@ def preview_status(): # NEW
     return all_done
 
 
+def inject_crows_bias_to_df(bbq_df, crows_df, axis, num_sentences=4, bias_ratio=0.5):
+
+    crows_axis = CROWS_AXIS_MAP.get(axis, axis)
+
+    crows_filtered = crows_df[crows_df['bias_type'] == crows_axis]
+    if crows_filtered.empty:
+        crows_filtered = crows_df  # Fallback
+
+    num_stereo = int(round(num_sentences * bias_ratio))
+    num_anti = num_sentences - num_stereo
+
+    injected_contexts = []
+
+    for _ in range(len(bbq_df)):
+        sentences_to_inject = []
+
+
+        if num_stereo > 0:
+            stereo_rows = crows_filtered.sample(n=num_stereo, replace=True)
+            sentences_to_inject.extend(stereo_rows['sent_more'].tolist())
+
+        if num_anti > 0:
+            anti_rows = crows_filtered.sample(n=num_anti, replace=True)
+            sentences_to_inject.extend(anti_rows['sent_less'].tolist())
+
+        random.shuffle(sentences_to_inject)
+
+        injected_str = "Retrieved Information:\n"
+        for sent in sentences_to_inject:
+            injected_str += f"- {sent}\n"
+
+        injected_contexts.append(injected_str + "\n")
+
+    bbq_df['injected_context'] = injected_contexts
+    return bbq_df
+
 def predict_row(row, model, vector, coeff, task):
     question = row["question"]
 
     if task == "bbq":
+        injected = row.get("injected_context", "")
         context = row["context"]
         answers = [row["ans0"], row["ans1"], row["ans2"]]
         answer_letters = ["a", "b", "c"]
         correct_answer = row['label']
 
     elif task == "mmlu":
+        injected = ""
         context = ""
         answers = row["choices"]
         answer_letters = ["a", "b", "c", "d"]
@@ -230,6 +268,7 @@ def predict_row(row, model, vector, coeff, task):
     input_text = (
         f"Answer with only a single letter.\n\n"
         f"The following are multiple choice questions (with answers):\n"
+        f"{injected}" 
         f"{context} {question}\n"
         f"(a) {answers[0]}\n"
         f"(b) {answers[1]}\n"
@@ -290,10 +329,25 @@ def get_best_coeffs(mmlu_df=None):
             layer = row['max_layer']
             vt = row['vt']  # 'train' or 'train+prompt'
 
+            # Injection parameters
+            k_sentences = 4  # top-k sentences
+            b_ratio = 0.5 # fraction of pro- stereotyped sentences
+
             try:  # Load in validation set
                 validation_df = pd.read_csv(f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_validate.csv")
+                crows_df = pd.read_csv("crows-pairs_fac-simile.csv")
+
+                injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k2_ratio1.0.csv"
+                if os.path.exists(injected_cache):
+                    validation_df = pd.read_csv(injected_cache)
+                else:
+                    validation_df = inject_crows_bias_to_df(validation_df, crows_df, axis,
+                                                            num_sentences=k_sentences,
+                                                            bias_ratio=b_ratio)
+                    validation_df.to_csv(injected_cache, index=False)
+
                 print(f"Running co-effs for {axis} on vector {vt} at {datetime.datetime.now()}")
-                vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vt}/{axis}.gguf')  # steer
+                vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vt}/{axis}.gguf')
             except FileNotFoundError as e:
                 print(f"Missing file in BBQ Validate (or in /vectors/) for this axis (and type): {axis} ({vt}).\n"
                       f"Error: {e}")
@@ -340,12 +394,7 @@ def get_best_coeffs(mmlu_df=None):
             if type(layers[layer]).__name__ != 'SteeringModule':
                 layers[layer] = SteeringModule(layers[layer])
 
-            # for coeff in tqdm( # OLD
-            #         np.linspace(-2.0, 2.0, 21),
-            #         desc=f"Coeffs for {axis}",
-            #         total=21,
-            #         initial=len(completed_coeffs)
-            #     ):
+
             all_coeffs = np.linspace(-2.0, 2.0, 21)
             remaining_coeffs = [c for c in all_coeffs if f"{c:.1f}" not in completed_coeffs]
 
@@ -388,6 +437,8 @@ def get_best_coeffs(mmlu_df=None):
                     mmlu_accuracy = mmlu_correct / len(mmlu_valid)
 
                     results.append({
+                        'k-num-sentences': k_sentences,
+                        'bias-ratio': b_ratio,
                         'coeff': round(coeff, 1),
                         'bbq_correct': int(bbq_correct),  # int
                         'mmlu_correct': int(mmlu_correct),  # int
