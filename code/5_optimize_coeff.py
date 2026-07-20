@@ -1,4 +1,3 @@
-
 import datetime
 import transformers
 import pandas as pd
@@ -17,8 +16,9 @@ from utils import get_output
 from utils_new import (new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model,
                        model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, CROWS_AXIS_MAP, EXPERIMENT, SEED)
 
-import random
+
 import warnings
+
 warnings.filterwarnings(
     "ignore",
     message="_check_is_size will be removed",
@@ -31,7 +31,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')
 parser.add_argument('-p', '--path', type=str, default=None, help='model path')
 parser.add_argument('-c', '--colab', action='store_true', help='flag about remote saving')
-parser.add_argument('-o', '--only-preview', action='store_true', help='show only the preview')
+parser.add_argument('-o', '--only_preview', action='store_true', help='Show only the preview')
+parser.add_argument('-k', '--k_sentences', type=int, default=4, help='Number of retrieved sentences')
+parser.add_argument('-b', '--bias_ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
+
 args = parser.parse_args()
 
 (model_name, model_path) = new_get_args([args.name, args.path])
@@ -87,9 +90,13 @@ def check_paths():
         except Exception as err:
             print(f'Missing this path:\n{LOCAL_COEFF_SCORES_DIR}. ERROR: {err}')
 
+    if os.path.exists("../raw_data/crows/crows_pairs.csv"):
+        checked += 1
+    else:
+        print(f'Missing documents path:\n../raw_data/crows/crows_pairs.csv')
 
     # print(f'Checked = {checked}')
-    if checked >= 3:
+    if checked >= 4:
         return True
     else:
         return False
@@ -102,7 +109,7 @@ def old_prepare_MMLU():
     full_df = pd.DataFrame(mmlu)
 
     # Get an equal sample from all subjects up to roughly 1000 questions
-    mmlu_df = full_df.groupby('subject').sample(n=1000 // full_df['subject'].nunique(), random_state=42).reset_index(
+    mmlu_df = full_df.groupby('subject').sample(n=1000 // full_df['subject'].nunique(), random_state=SEED).reset_index(
         drop=True)
     print(len(mmlu_df))
     return mmlu_df
@@ -134,17 +141,18 @@ def prepare_MMLU():
     print("\nProcessing MMLU dataset...")
 
     mmlu_df = (
-        full_df.groupby('subject').sample(n=1000 // full_df['subject'].nunique(), random_state=42).reset_index(drop=True)
+        full_df.groupby('subject').sample(n=1000 // full_df['subject'].nunique(), random_state=SEED).reset_index(
+            drop=True)
     )
     print(len(mmlu_df))
     return mmlu_df
 
 
-def preview_status(): # NEW
+def preview_status():  # NEW
     """Print a preview of the current status"""
-    print("\n" + "="*55)
+    print("\n" + "=" * 55)
     print("PRE-RUN STATUS CHECK")
-    print("="*55)
+    print("=" * 55)
 
     all_done = True
     resume_point = None
@@ -193,7 +201,7 @@ def preview_status(): # NEW
                 if done >= 21:
                     print(f"  ✓ {axis:15s} ({vt})  →  complete ({done}/21)")
                 else:
-                    print(f"  ○ {axis:15s} ({vt})  →  partial ({done}/21)") #…
+                    print(f"  ○ {axis:15s} ({vt})  →  partial ({done}/21)")  #…
                     all_done = False
                     if resume_point is None:  # NEW
                         resume_point = {
@@ -201,33 +209,34 @@ def preview_status(): # NEW
                             'layer': layer, 'done': done
                         }
 
-    print("\n" + "="*55)
+    print("\n" + "=" * 55)
     if all_done:
         print("All axes calculated :)")
     else:
         rp = resume_point
         print(f"Resuming operations from: \n{rp['axis']} ({rp['vt']}, {rp['top_vt']})\n"
               f"layer {rp['layer']}  →  {rp['done']}/21 coefficients done")
-    print("="*55 + "\n")
+    print("=" * 55 + "\n")
     return all_done
 
 
 def inject_crows_bias_to_df(bbq_df, crows_df, axis, num_sentences=4, bias_ratio=0.5):
-
     crows_axis = CROWS_AXIS_MAP.get(axis, axis)
 
     crows_filtered = crows_df[crows_df['bias_type'] == crows_axis]
     if crows_filtered.empty:
-        crows_filtered = crows_df  # Fallback
+        print(f"[WARNING] No CrowS '{crows_axis}' for BBQ '{axis}' axis. "
+              f"Fallback on the full dataset.")
+        crows_filtered = crows_df
 
     num_stereo = int(round(num_sentences * bias_ratio))
     num_anti = num_sentences - num_stereo
+    rng = np.random.default_rng(SEED)  # random generator
 
     injected_contexts = []
 
     for _ in range(len(bbq_df)):
         sentences_to_inject = []
-
 
         if num_stereo > 0:
             stereo_rows = crows_filtered.sample(n=num_stereo, replace=True)
@@ -237,7 +246,8 @@ def inject_crows_bias_to_df(bbq_df, crows_df, axis, num_sentences=4, bias_ratio=
             anti_rows = crows_filtered.sample(n=num_anti, replace=True)
             sentences_to_inject.extend(anti_rows['sent_less'].tolist())
 
-        random.shuffle(sentences_to_inject)
+        order = rng.permutation(len(sentences_to_inject))
+        sentences_to_inject = [sentences_to_inject[i] for i in order]
 
         injected_str = "Retrieved Information:\n"
         for sent in sentences_to_inject:
@@ -245,8 +255,10 @@ def inject_crows_bias_to_df(bbq_df, crows_df, axis, num_sentences=4, bias_ratio=
 
         injected_contexts.append(injected_str + "\n")
 
+    bbq_df = bbq_df.copy()
     bbq_df['injected_context'] = injected_contexts
     return bbq_df
+
 
 def predict_row(row, model, vector, coeff, task):
     question = row["question"]
@@ -268,7 +280,7 @@ def predict_row(row, model, vector, coeff, task):
     input_text = (
         f"Answer with only a single letter.\n\n"
         f"The following are multiple choice questions (with answers):\n"
-        f"{injected}" 
+        f"{injected}"
         f"{context} {question}\n"
         f"(a) {answers[0]}\n"
         f"(b) {answers[1]}\n"
@@ -331,19 +343,20 @@ def get_best_coeffs(mmlu_df=None):
 
             # Injection parameters
             k_sentences = 4  # top-k sentences
-            b_ratio = 0.5 # fraction of pro- stereotyped sentences
+            b_ratio = 0.5  # fraction of pro- stereotyped sentences
 
             try:  # Load in validation set
                 validation_df = pd.read_csv(f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_validate.csv")
-                crows_df = pd.read_csv("crows-pairs_fac-simile.csv")
+                crows_df = pd.read_csv("../raw_data/crows/crows_pairs.csv")
 
-                injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k2_ratio1.0.csv"
+                injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k={k_sentences}_br={b_ratio}.csv"
                 if os.path.exists(injected_cache):
                     validation_df = pd.read_csv(injected_cache)
                 else:
-                    validation_df = inject_crows_bias_to_df(validation_df, crows_df, axis,
-                                                            num_sentences=k_sentences,
-                                                            bias_ratio=b_ratio)
+                    validation_df = inject_crows_bias_to_df(
+                        validation_df, crows_df, axis,
+                        num_sentences=k_sentences, bias_ratio=b_ratio
+                    )
                     validation_df.to_csv(injected_cache, index=False)
 
                 print(f"Running co-effs for {axis} on vector {vt} at {datetime.datetime.now()}")
@@ -393,7 +406,6 @@ def get_best_coeffs(mmlu_df=None):
             # if not isinstance(layers[layer], SteeringModule):
             if type(layers[layer]).__name__ != 'SteeringModule':
                 layers[layer] = SteeringModule(layers[layer])
-
 
             all_coeffs = np.linspace(-2.0, 2.0, 21)
             remaining_coeffs = [c for c in all_coeffs if f"{c:.1f}" not in completed_coeffs]
