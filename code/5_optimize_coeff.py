@@ -15,7 +15,7 @@ from dialz.vector import SteeringModule
 
 from utils import get_output
 from utils_new import (new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model,
-                       model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, CROWS_TO_BBQ_MAP, EXPERIMENT)
+                       model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, CROWS_TO_BBQ_MAP, EXPERIMENT, SEED)
 
 import random
 import warnings
@@ -216,28 +216,28 @@ def inject_crows_bias_to_df(bbq_df, crows_df, axis, num_sentences=2, bias_ratio=
 
     crows_axis = CROWS_TO_BBQ_MAP.get(axis, axis)
 
-    # Filtriamo le frasi CrowS pertinenti al topic della domanda BBQ
+
     crows_filtered = crows_df[crows_df['bias_type'] == crows_axis]
     if crows_filtered.empty:
-        crows_filtered = crows_df  # Fallback di sicurezza
+        print(f"[WARNING] No CrowS sentence for bias_type='{crows_axis}' (axis='{axis}'). "
+              f"Fallback on the entire CrowS-Pairs dataset.")
+        crows_filtered = crows_df
 
+    rng = np.random.default_rng(SEED)
     injected_contexts = []
 
     for _ in range(len(bbq_df)):
-        # Campioniamo k frasi randomiche
         sampled_rows = crows_filtered.sample(n=num_sentences, replace=True)
         injected_str = "Retrieved Information:\n"
 
         for _, row in sampled_rows.iterrows():
-            # Inseriamo 'sent_more' (stereotipo) o 'sent_less' (anti-stereotipo)
-            if random.random() < bias_ratio:
+            if rng.random() < bias_ratio:
                 injected_str += f"- {row['sent_more']}\n"
             else:
                 injected_str += f"- {row['sent_less']}\n"
-
         injected_contexts.append(injected_str + "\n")
 
-    # Creiamo una nuova colonna nel dataframe
+    bbq_df = bbq_df.copy()
     bbq_df['injected_context'] = injected_contexts
     return bbq_df
 
@@ -326,15 +326,16 @@ def get_best_coeffs(mmlu_df=None):
             try:  # Load in validation set
                 validation_df = pd.read_csv(f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_validate.csv")
 
+
                 crows_df = pd.read_csv("crows-pairs_fac-simile.csv")
 
-                validation_df = inject_crows_bias_to_df(
-                    validation_df,
-                    crows_df,
-                    axis,
-                    num_sentences=2,
-                    bias_ratio=1.0
-                )
+                injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k2_ratio1.0.csv"
+                if os.path.exists(injected_cache):
+                    validation_df = pd.read_csv(injected_cache)
+                else:
+                    validation_df = inject_crows_bias_to_df(validation_df, crows_df, axis, num_sentences=2,
+                                                            bias_ratio=1.0)
+                    validation_df.to_csv(injected_cache, index=False)
 
                 print(f"Running co-effs for {axis} on vector {vt} at {datetime.datetime.now()}")
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vt}/{axis}.gguf')
