@@ -5,8 +5,7 @@ import numpy as np
 import argparse
 import os
 
-from tqdm.auto import tqdm
-# from tqdm.notebook import tqdm
+from tqdm.auto import tqdm  # from tqdm.notebook import tqdm
 
 from datasets import load_dataset
 from dialz import SteeringVector
@@ -32,9 +31,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')
 parser.add_argument('-p', '--path', type=str, default=None, help='model path')
 parser.add_argument('-c', '--colab', action='store_true', help='flag about remote saving')
-parser.add_argument('-o', '--only_preview', action='store_true', help='Show only the preview')
-parser.add_argument('-k', '--k_sentences', type=int, default=4, help='Number of retrieved sentences')
-parser.add_argument('-b', '--bias_ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
+parser.add_argument('-o', '--only-preview', action='store_true', help='Show only the preview')
+parser.add_argument('-k', '--k-sentences', type=int, default=4, help='Number of retrieved sentences')
+parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
 
 args = parser.parse_args()
@@ -229,6 +228,11 @@ def preview_status():  # NEW
 
 
 def inject_crows_bias_to_df(bbq_df, crows_df, axis, num_sentences=4, bias_ratio=0.5):
+    if num_sentences <= 0:
+        bbq_df = bbq_df.copy()
+        bbq_df['injected_context'] = ""  # no contextual injections
+        return bbq_df
+
     crows_axis = CROWS_AXIS_MAP.get(axis, axis)
 
     crows_filtered = crows_df[crows_df['bias_type'] == crows_axis]
@@ -355,8 +359,8 @@ def get_best_coeffs(mmlu_df=None):
             vt = row['vt']  # 'train' or 'train+prompt'
 
             # Injection parameters
-            k_sentences = 4  # top-k sentences
-            b_ratio = 0.5  # fraction of pro- stereotyped sentences
+            k_sentences = args.k_sentences  # top-k sentences
+            b_ratio = args.bias_ratio  # fraction of pro- stereotyped sentences
 
             try:  # Load in validation set
                 validation_df = pd.read_csv(f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_validate.csv")
