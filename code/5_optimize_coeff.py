@@ -12,6 +12,7 @@ from datasets import load_dataset
 from dialz import SteeringVector
 from dialz.vector import SteeringModule
 
+from utils import bbq_axes
 from utils import get_output
 from utils_new import (new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model,
                        model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, CROWS_AXIS_MAP, EXPERIMENT, SEED)
@@ -34,13 +35,20 @@ parser.add_argument('-c', '--colab', action='store_true', help='flag about remot
 parser.add_argument('-o', '--only_preview', action='store_true', help='Show only the preview')
 parser.add_argument('-k', '--k_sentences', type=int, default=4, help='Number of retrieved sentences')
 parser.add_argument('-b', '--bias_ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
+parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
 
 args = parser.parse_args()
+
 
 (model_name, model_path) = new_get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
+
+if args.axes is None:
+    required_axes = args.axes
+else:
+    required_axes = bbq_axes
 
 LOCAL_BEST_LAYERS_DIR = f'../data/layer_scores/{model_short_name}/best_layers'
 LOCAL_BBQ_VALIDATE_DIR = f"../data/bbq_validate"  # 1 file for each axis
@@ -338,6 +346,11 @@ def get_best_coeffs(mmlu_df=None):
         for _, row in best_layers.iterrows():  # for each discrimination-axis
             # each axis is a bias variable, with its own best layer index (max. accuracy and separability)
             axis = row['axis']
+
+            if axis not in required_axes:
+                print(f'Skipping {axis}: not required')
+                continue
+
             layer = row['max_layer']
             vt = row['vt']  # 'train' or 'train+prompt'
 
