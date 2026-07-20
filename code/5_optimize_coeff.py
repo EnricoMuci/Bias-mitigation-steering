@@ -354,7 +354,7 @@ def get_best_coeffs(mmlu_df=None):
                 continue
 
             # Save paths
-            csv_name = f"{axis}_{vt}.csv"
+            csv_name = f"{axis}_{vt}_k={k_sentences}_b={b_ratio}.csv"
 
             local_dir_path = f"{LOCAL_COEFF_SCORES_DIR}/{top_vt}"  # 'top_train/' or 'top_train+prompt/'
             os.makedirs(local_dir_path, exist_ok=True)
