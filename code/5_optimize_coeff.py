@@ -15,9 +15,9 @@ from dialz.vector import SteeringModule
 
 from utils import get_output
 from utils_new import (new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model,
-                       model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, EXPERIMENT)
+                       model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, CROWS_TO_BBQ_MAP, EXPERIMENT)
 
-
+import random
 import warnings
 warnings.filterwarnings(
     "ignore",
@@ -212,16 +212,48 @@ def preview_status(): # NEW
     return all_done
 
 
+def inject_crows_bias_to_df(bbq_df, crows_df, axis, num_sentences=2, bias_ratio=1.0):
+
+    crows_axis = CROWS_TO_BBQ_MAP.get(axis, axis)
+
+    # Filtriamo le frasi CrowS pertinenti al topic della domanda BBQ
+    crows_filtered = crows_df[crows_df['bias_type'] == crows_axis]
+    if crows_filtered.empty:
+        crows_filtered = crows_df  # Fallback di sicurezza
+
+    injected_contexts = []
+
+    for _ in range(len(bbq_df)):
+        # Campioniamo k frasi randomiche
+        sampled_rows = crows_filtered.sample(n=num_sentences, replace=True)
+        injected_str = "Retrieved Information:\n"
+
+        for _, row in sampled_rows.iterrows():
+            # Inseriamo 'sent_more' (stereotipo) o 'sent_less' (anti-stereotipo)
+            if random.random() < bias_ratio:
+                injected_str += f"- {row['sent_more']}\n"
+            else:
+                injected_str += f"- {row['sent_less']}\n"
+
+        injected_contexts.append(injected_str + "\n")
+
+    # Creiamo una nuova colonna nel dataframe
+    bbq_df['injected_context'] = injected_contexts
+    return bbq_df
+
+
 def predict_row(row, model, vector, coeff, task):
     question = row["question"]
 
     if task == "bbq":
+        injected = row.get("injected_context", "")
         context = row["context"]
         answers = [row["ans0"], row["ans1"], row["ans2"]]
         answer_letters = ["a", "b", "c"]
         correct_answer = row['label']
 
     elif task == "mmlu":
+        injected = ""
         context = ""
         answers = row["choices"]
         answer_letters = ["a", "b", "c", "d"]
@@ -230,6 +262,7 @@ def predict_row(row, model, vector, coeff, task):
     input_text = (
         f"Answer with only a single letter.\n\n"
         f"The following are multiple choice questions (with answers):\n"
+        f"{injected}" 
         f"{context} {question}\n"
         f"(a) {answers[0]}\n"
         f"(b) {answers[1]}\n"
@@ -292,8 +325,19 @@ def get_best_coeffs(mmlu_df=None):
 
             try:  # Load in validation set
                 validation_df = pd.read_csv(f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_validate.csv")
+
+                crows_df = pd.read_csv("crows-pairs_fac-simile.csv")
+
+                validation_df = inject_crows_bias_to_df(
+                    validation_df,
+                    crows_df,
+                    axis,
+                    num_sentences=2,
+                    bias_ratio=1.0
+                )
+
                 print(f"Running co-effs for {axis} on vector {vt} at {datetime.datetime.now()}")
-                vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vt}/{axis}.gguf')  # steer
+                vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vt}/{axis}.gguf')
             except FileNotFoundError as e:
                 print(f"Missing file in BBQ Validate (or in /vectors/) for this axis (and type): {axis} ({vt}).\n"
                       f"Error: {e}")

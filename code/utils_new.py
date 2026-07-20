@@ -17,6 +17,16 @@ REMOTE_DRIVE_THESIS_PROJECT = '/content/drive/MyDrive/ThesisProject'
 EXPERIMENT = 'reproduced'  # or 'original
 VECTOR_TYPES = ['train', 'train+prompt']
 
+CROWS_TO_BBQ_MAP = {
+        'age': 'age',
+        'appearance': 'physical-appearance',
+        'disability': 'disability',
+        'gender': 'gender',
+        'nationality': 'nationality',
+        'race': 'race-color',
+        'religion': 'religion',
+        'socioeconomic': 'socioeconomic'
+    }
 
 def new_get_args(args_list: list):
     model_name = args_list[0]

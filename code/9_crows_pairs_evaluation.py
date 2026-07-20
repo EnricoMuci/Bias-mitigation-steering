@@ -1,6 +1,6 @@
 import pandas as pd
 import torch
-from utils import get_output
+from utils_new import CROWS_TO_BBQ_MAP
 
 # Tokenizer will be passed as parameter to avoid circular import
 
@@ -89,18 +89,9 @@ def run_crows_pairs_evaluation(model, vector, coeff, axis, tokenizer, use_fairne
     print(f"Running CrowS-Pairs evaluation for axis: {axis}")
     
     # Map the axis to the correct bias_type
-    axis_to_bias_type = {
-        'age': 'age',
-        'appearance': 'physical-appearance',
-        'disability': 'disability',
-        'gender': 'gender',
-        'nationality': 'nationality',
-        'race': 'race-color',
-        'religion': 'religion',
-        'socioeconomic': 'socioeconomic'
-    }
+
     
-    bias_type = axis_to_bias_type[axis]
+    bias_type = CROWS_TO_BBQ_MAP[axis]
     
     # Load CrowS-Pairs dataset from local file
     crows_df = pd.read_csv("../raw_data/crows-pairs/crows_pairs.csv")
