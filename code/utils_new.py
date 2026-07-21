@@ -29,6 +29,7 @@ CROWS_AXIS_MAP = {
         'socioeconomic': 'socioeconomic'
     }
 
+
 def new_get_args(args_list: list):
     model_name = args_list[0]
     model_path = args_list[1]

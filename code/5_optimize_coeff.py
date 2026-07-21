@@ -44,7 +44,7 @@ model_short_name = get_model_short_name(model_name)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
 
-if args.axes is None:
+if args.axes is not None:
     required_axes = args.axes
 else:
     required_axes = bbq_axes
@@ -203,6 +203,9 @@ def preview_status():  # NEW
                         'layer': layer, 'done': 0
                     }
             else:
+                print(f'Coefficient scores path: {found_path}')
+                print("=" * 55)
+
                 df = pd.read_csv(found_path)
                 done = len(df)
                 if done >= 21:
@@ -251,11 +254,11 @@ def inject_crows_bias_to_df(bbq_df, crows_df, axis, num_sentences=4, bias_ratio=
         sentences_to_inject = []
 
         if num_stereo > 0:
-            stereo_rows = crows_filtered.sample(n=num_stereo, replace=True)
+            stereo_rows = crows_filtered.sample(n=num_stereo, replace=True, random_state=rng)
             sentences_to_inject.extend(stereo_rows['sent_more'].tolist())
 
         if num_anti > 0:
-            anti_rows = crows_filtered.sample(n=num_anti, replace=True)
+            anti_rows = crows_filtered.sample(n=num_anti, replace=True, random_state=rng)
             sentences_to_inject.extend(anti_rows['sent_less'].tolist())
 
         order = rng.permutation(len(sentences_to_inject))
@@ -368,7 +371,9 @@ def get_best_coeffs(mmlu_df=None):
 
                 # injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k={k_sentences}_br={b_ratio}.csv"
 
+                os.makedirs("../cache", exist_ok=True)
                 injected_cache = f"../cache/{axis}_injected_k={k_sentences}_b={b_ratio}.csv"
+
                 if os.path.exists(injected_cache):
                     validation_df = pd.read_csv(injected_cache)
                 else:
