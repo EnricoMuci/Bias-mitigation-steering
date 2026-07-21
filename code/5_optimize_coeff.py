@@ -32,12 +32,16 @@ parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Inst
 parser.add_argument('-p', '--path', type=str, default=None, help='model path')
 parser.add_argument('-c', '--colab', action='store_true', help='flag about remote saving')
 parser.add_argument('-o', '--only-preview', action='store_true', help='Show only the preview')
-parser.add_argument('-k', '--k-sentences', type=int, default=4, help='Number of retrieved sentences')
+parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of retrieved sentences')
 parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
-
 args = parser.parse_args()
 
+# Coefficient arguments
+MIN_COEFF = -2.0
+MAX_COEFF = 2.0
+STEP_COEF = 0.2
+NUM_COEFFS = int(round((MAX_COEFF - MIN_COEFF) / STEP_COEF)) + 1
 
 (model_name, model_path) = new_get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
@@ -165,7 +169,7 @@ def preview_status():  # NEW
         for _, row in best_layers.iterrows():
             axis = row['axis']
             vt = row['vt']
-            csv_name = f"{axis}_{vt}_k={args.k_sentences}_b={args.bias_ratio}.csv" # csv_name = f"{axis}_{vt}.csv"
+            csv_name = f"{axis}_{vt}_k={args.k_sentences}_b={args.bias_ratio}.csv"  # csv_name = f"{axis}_{vt}.csv"
             layer = row['max_layer']
 
             found_path = None
@@ -194,10 +198,10 @@ def preview_status():  # NEW
 
                 df = pd.read_csv(found_path)
                 done = len(df)
-                if done >= 21:
-                    print(f"  ✓ {axis:15s} ({vt})  →  complete ({done}/21)")
+                if done >= NUM_COEFFS:
+                    print(f"  ✓ {axis:15s} ({vt})  →  complete ({done}/{NUM_COEFFS})")
                 else:
-                    print(f"  ○ {axis:15s} ({vt})  →  partial ({done}/21)")
+                    print(f"  ○ {axis:15s} ({vt})  →  partial ({done}/{NUM_COEFFS})")
                     all_done = False
                     if resume_point is None:  # NEW
                         resume_point = {
@@ -211,7 +215,7 @@ def preview_status():  # NEW
     else:
         rp = resume_point
         print(f"Resuming operations from: \n{rp['axis']} ({rp['vt']}, {rp['top_vt']})\n"
-              f"layer {rp['layer']}  →  {rp['done']}/21 coefficients done")
+              f"layer {rp['layer']}  →  {rp['done']}/{NUM_COEFFS} coefficients done")
     print("=" * 55 + "\n")
     return all_done
 
@@ -277,6 +281,9 @@ def predict_row(row, model, vector, coeff, task):
         answers = row["choices"]
         answer_letters = ["a", "b", "c", "d"]
         correct_answer = row['answer']
+
+    else:
+        raise ValueError(f"Unknown task: '{task}'. Expected 'bbq' or 'mmlu'.")
 
     input_text = (
         f"Answer with only a single letter.\n\n"
@@ -417,13 +424,13 @@ def get_best_coeffs(mmlu_df=None):
             if type(layers[layer]).__name__ != 'SteeringModule':
                 layers[layer] = SteeringModule(layers[layer])
 
-            all_coeffs = np.linspace(-2.0, 2.0, 21)
+            all_coeffs = np.linspace(MIN_COEFF, MAX_COEFF, NUM_COEFFS)
             remaining_coeffs = [c for c in all_coeffs if f"{c:.1f}" not in completed_coeffs]
 
             for coeff in tqdm(
                     remaining_coeffs,
                     desc=f"  Coeffs for {axis} ({vt}): ",
-                    total=21,  # max length
+                    total=NUM_COEFFS,  # max length
                     initial=len(completed_coeffs),  # initial step
                     leave=False,
                     dynamic_ncols=True,
