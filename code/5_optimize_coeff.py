@@ -77,7 +77,7 @@ def check_paths():
     if os.path.exists(LOCAL_BEST_LAYERS_DIR):
         checked += 1
     else:
-        print(f'Missing best layers path:\n{LOCAL_BEST_LAYERS_DIR}')
+        print(f'Missing this path:\n{LOCAL_BEST_LAYERS_DIR}')
 
     if os.path.exists(LOCAL_BBQ_VALIDATE_DIR):
         checked += 1
@@ -425,7 +425,7 @@ def get_best_coeffs(mmlu_df=None):
 
             for coeff in tqdm(
                     remaining_coeffs,
-                    desc=f"  Coeffs for {axis}: ",
+                    desc=f"  Coeffs for {axis} ({vt}): ",
                     total=21,  # max length
                     initial=len(completed_coeffs),  # initial step
                     leave=False,
