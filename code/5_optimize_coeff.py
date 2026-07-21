@@ -183,7 +183,6 @@ def preview_status():  # NEW
 
 
             if found_path is None:
-                print(f'Missing path: {LOCAL_BEST_LAYERS_DIR}')
                 print(f"  ✗ {axis:15s} ({vt})  →  not initialized")
                 all_done = False
                 if resume_point is None:
@@ -192,8 +191,6 @@ def preview_status():  # NEW
                         'layer': layer, 'done': 0
                     }
             else:
-                print(f'Coefficient scores path: {found_path}')
-                print("=" * 55)
 
                 df = pd.read_csv(found_path)
                 done = len(df)
