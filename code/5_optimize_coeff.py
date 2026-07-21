@@ -195,6 +195,7 @@ def preview_status():  # NEW
                     found_path = local_fp
 
             if found_path is None:
+                print(f'Missing path: {found_path}')
                 print(f"  ✗ {axis:15s} ({vt})  →  not initialized")
                 all_done = False
                 if resume_point is None:
