@@ -40,7 +40,7 @@ args = parser.parse_args()
 # Coefficient arguments
 MIN_COEFF = -2.0
 MAX_COEFF = 2.0
-STEP_COEF = 0.2
+STEP_COEF = 0.2  # use only 1.f format
 NUM_COEFFS = int(round((MAX_COEFF - MIN_COEFF) / STEP_COEF)) + 1
 
 (model_name, model_path) = new_get_args([args.name, args.path])
