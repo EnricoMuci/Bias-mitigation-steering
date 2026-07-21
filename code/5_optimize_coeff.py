@@ -195,7 +195,7 @@ def preview_status():  # NEW
                     found_path = local_fp
 
             if found_path is None:
-                print(f'Missing path: {found_path}')
+                print(f'Missing path: {LOCAL_BEST_LAYERS_DIR}')
                 print(f"  ✗ {axis:15s} ({vt})  →  not initialized")
                 all_done = False
                 if resume_point is None:
@@ -212,7 +212,7 @@ def preview_status():  # NEW
                 if done >= 21:
                     print(f"  ✓ {axis:15s} ({vt})  →  complete ({done}/21)")
                 else:
-                    print(f"  ○ {axis:15s} ({vt})  →  partial ({done}/21)")  #…
+                    print(f"  ○ {axis:15s} ({vt})  →  partial ({done}/21)")  
                     all_done = False
                     if resume_point is None:  # NEW
                         resume_point = {
