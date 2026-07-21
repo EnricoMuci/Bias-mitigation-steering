@@ -145,7 +145,7 @@ def prepare_MMLU():
 def preview_status():  # NEW
     """Print a preview of the current status"""
     print("\n" + "=" * 55)
-    print("PRE-RUN STATUS CHECK")
+    print(f"PRE-RUN STATUS CHECK [K = {args.k_sentences}] - [B = {args.bias_ratio}")
     print("=" * 55)
 
     all_done = True
