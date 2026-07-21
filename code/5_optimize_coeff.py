@@ -77,12 +77,12 @@ def check_paths():
     if os.path.exists(LOCAL_BEST_LAYERS_DIR):
         checked += 1
     else:
-        print(f'Missing this path:\n{LOCAL_BEST_LAYERS_DIR}')
+        print(f'Missing best layers path:\n{LOCAL_BEST_LAYERS_DIR}')
 
     if os.path.exists(LOCAL_BBQ_VALIDATE_DIR):
         checked += 1
     else:
-        print(f'Missing this path:\n{LOCAL_BBQ_VALIDATE_DIR}')
+        print(f'Missing BBQ validation set path:\n{LOCAL_BBQ_VALIDATE_DIR}')
 
     if os.path.exists(LOCAL_COEFF_SCORES_DIR):
         checked += 1
@@ -92,10 +92,10 @@ def check_paths():
     else:
         try:
             os.makedirs(LOCAL_COEFF_SCORES_DIR, exist_ok=True)
-            print(f'Missing this path:\n{LOCAL_COEFF_SCORES_DIR}. Just created')
+            print(f'Missing coefficient-scores path:\n{LOCAL_COEFF_SCORES_DIR}. Just created')
             checked += 1
         except Exception as err:
-            print(f'Missing this path:\n{LOCAL_COEFF_SCORES_DIR}. ERROR: {err}')
+            print(f'Missing coefficient-scores path:\n{LOCAL_COEFF_SCORES_DIR}. ERROR: {err}')
 
     if os.path.exists("../raw_data/crows/crows_pairs.csv"):
         checked += 1
@@ -107,19 +107,6 @@ def check_paths():
         return True
     else:
         return False
-
-
-def old_prepare_MMLU():
-    print("\nLoading MMLU dataset...")
-    mmlu = load_dataset("cais/mmlu", "all", split="test")
-    print("\nProcessing MMLU dataset...")
-    full_df = pd.DataFrame(mmlu)
-
-    # Get an equal sample from all subjects up to roughly 1000 questions
-    mmlu_df = full_df.groupby('subject').sample(n=1000 // full_df['subject'].nunique(), random_state=SEED).reset_index(
-        drop=True)
-    print(len(mmlu_df))
-    return mmlu_df
 
 
 def prepare_MMLU():
@@ -178,7 +165,7 @@ def preview_status():  # NEW
         for _, row in best_layers.iterrows():
             axis = row['axis']
             vt = row['vt']
-            csv_name = f"{axis}_{vt}.csv"
+            csv_name = f"{axis}_{vt}_k={args.k_sentences}_b={args.bias_ratio}.csv" # csv_name = f"{axis}_{vt}.csv"
             layer = row['max_layer']
 
             found_path = None
@@ -193,6 +180,7 @@ def preview_status():  # NEW
                 local_fp = os.path.join(LOCAL_COEFF_SCORES_DIR, top_vt, csv_name)
                 if os.path.exists(local_fp):
                     found_path = local_fp
+
 
             if found_path is None:
                 print(f'Missing path: {LOCAL_BEST_LAYERS_DIR}')
@@ -212,7 +200,7 @@ def preview_status():  # NEW
                 if done >= 21:
                     print(f"  ✓ {axis:15s} ({vt})  →  complete ({done}/21)")
                 else:
-                    print(f"  ○ {axis:15s} ({vt})  →  partial ({done}/21)")  
+                    print(f"  ○ {axis:15s} ({vt})  →  partial ({done}/21)")
                     all_done = False
                     if resume_point is None:  # NEW
                         resume_point = {
@@ -505,7 +493,11 @@ def get_best_coeffs(mmlu_df=None):
 
 if __name__ == "__main__":
     if check_paths():
-        print('All path correctly checked')
+
+        print("=" * 55)
+        print('All paths correctly checked')
+        print("=" * 55)
+
         already_done = preview_status()  # print current status
         if not args.only_preview:  # if not Only preview
             if not already_done:
