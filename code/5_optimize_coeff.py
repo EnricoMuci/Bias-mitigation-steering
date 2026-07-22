@@ -14,7 +14,8 @@ from dialz.vector import SteeringModule
 from utils import bbq_axes
 from utils import get_output
 from utils_new import (new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model,
-                       model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, CROWS_AXIS_MAP, EXPERIMENT, SEED)
+                       model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, CROWS_AXIS_MAP, EXPERIMENT, SEED,
+                       CROWS_PATH)
 
 
 import warnings
@@ -43,6 +44,8 @@ MAX_COEFF = 2.0
 STEP_COEF = 0.2  # use only 1.f format
 NUM_COEFFS = int(round((MAX_COEFF - MIN_COEFF) / STEP_COEF)) + 1
 
+inject_path = CROWS_PATH
+
 (model_name, model_path) = new_get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 
@@ -55,7 +58,7 @@ else:
 
 LOCAL_BEST_LAYERS_DIR = f'../data/layer_scores/{model_short_name}/best_layers'
 LOCAL_BBQ_VALIDATE_DIR = f"../data/bbq_validate"  # 1 file for each axis
-LOCAL_COEFF_SCORES_DIR = f'../data/coeff_scores/{model_short_name}-{EXPERIMENT}'
+LOCAL_COEFF_SCORES_DIR = f'../data/coeff_scores/{model_short_name}-{EXPERIMENT}/k={args.k_sentences}_b={args.bias_ratio}'
 TOP_VECTOR_TYPES = ["top_train", "top_train+prompt"]
 
 
@@ -88,23 +91,20 @@ def check_paths():
     else:
         print(f'Missing BBQ validation set path:\n{LOCAL_BBQ_VALIDATE_DIR}')
 
-    if os.path.exists(LOCAL_COEFF_SCORES_DIR):
-        checked += 1
+    try:
+        os.makedirs(LOCAL_COEFF_SCORES_DIR, exist_ok=True)
         for vtf in TOP_VECTOR_TYPES:
-            print(f'Creating this directory: {LOCAL_COEFF_SCORES_DIR}/{vtf}/')
-            os.makedirs(os.path.join(LOCAL_COEFF_SCORES_DIR, vtf), exist_ok=True)
-    else:
-        try:
-            os.makedirs(LOCAL_COEFF_SCORES_DIR, exist_ok=True)
-            print(f'Missing coefficient-scores path:\n{LOCAL_COEFF_SCORES_DIR}. Just created')
-            checked += 1
-        except Exception as err:
-            print(f'Missing coefficient-scores path:\n{LOCAL_COEFF_SCORES_DIR}. ERROR: {err}')
+            vt_dir = vtf.removeprefix("top_")
+            print(f'Creating this directory: {LOCAL_COEFF_SCORES_DIR}/{vt_dir}/')
+            os.makedirs(os.path.join(LOCAL_COEFF_SCORES_DIR, vt_dir), exist_ok=True)
+        checked += 1
+    except Exception as err:
+        print(f'Missing coefficient-scores path:\n{LOCAL_COEFF_SCORES_DIR}. ERROR: {err}')
 
-    if os.path.exists("../raw_data/crows/crows_pairs.csv"):
+    if os.path.exists(inject_path):
         checked += 1
     else:
-        print(f'Missing documents path:\n../raw_data/crows/crows_pairs.csv')
+        print(f'Missing documents path:\n{inject_path}')
 
     # print(f'Checked = {checked}')
     if checked >= 4:
@@ -157,6 +157,7 @@ def preview_status():  # NEW
 
     for top_vt in TOP_VECTOR_TYPES:
         top_best_vt_file = f"{LOCAL_BEST_LAYERS_DIR}/{top_vt}.csv"
+        vt_dir = top_vt.removeprefix("top_")  # 'top_train' -> 'train'
         print(f"\n[{top_vt}]")
 
         if not os.path.exists(top_best_vt_file):
@@ -175,13 +176,13 @@ def preview_status():  # NEW
             found_path = None
             if args.colab:
                 remote_dir = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/"
-                              f"{model_short_name}-{EXPERIMENT}/{top_vt}")
+                              f"{model_short_name}-{EXPERIMENT}/{vt_dir}")
                 remote_fp = os.path.join(remote_dir, csv_name)
                 if os.path.exists(remote_fp):
                     found_path = remote_fp
 
             if found_path is None:
-                local_fp = os.path.join(LOCAL_COEFF_SCORES_DIR, top_vt, csv_name)
+                local_fp = os.path.join(LOCAL_COEFF_SCORES_DIR, vt_dir, csv_name)
                 if os.path.exists(local_fp):
                     found_path = local_fp
 
@@ -332,6 +333,7 @@ def get_best_coeffs(mmlu_df=None):
 
     for top_vt in TOP_VECTOR_TYPES:  # 'top_train' 'top_train+prompt'
         top_best_vt_file = f"{LOCAL_BEST_LAYERS_DIR}/{top_vt}.csv"
+        vt_dir = top_vt.removeprefix("top_")
 
         if not os.path.exists(top_best_vt_file):
             # In best_layers there should be only
@@ -360,12 +362,12 @@ def get_best_coeffs(mmlu_df=None):
 
             try:  # Load in validation set
                 validation_df = pd.read_csv(f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_validate.csv") # validation samples
-                crows_df = pd.read_csv("../raw_data/crows/crows_pairs.csv") # Database for injections
+                crows_df = pd.read_csv(f"{inject_path}") # Database for injections
 
                 # injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k={k_sentences}_br={b_ratio}.csv"
 
                 os.makedirs("../cache", exist_ok=True)
-                injected_cache = f"../cache/{axis}_injected_k={k_sentences}_b={b_ratio}.csv"
+                injected_cache = f"../cache/{vt}_k={k_sentences}_b={b_ratio}/{axis}_injected_k={k_sentences}_b={b_ratio}.csv"
 
                 if os.path.exists(injected_cache):
                     validation_df = pd.read_csv(injected_cache)
@@ -386,13 +388,13 @@ def get_best_coeffs(mmlu_df=None):
             # Save paths
             csv_name = f"{axis}_{vt}_k={k_sentences}_b={b_ratio}.csv"
 
-            local_dir_path = f"{LOCAL_COEFF_SCORES_DIR}/{top_vt}"  # 'top_train/' or 'top_train+prompt/'
+            local_dir_path = f"{LOCAL_COEFF_SCORES_DIR}/{vt_dir}"  # 'train/' or 'train+prompt/'
             os.makedirs(local_dir_path, exist_ok=True)
             local_file_path = os.path.join(local_dir_path, csv_name)
 
             if args.colab:  # In Colab, it creates the remote vt path to manage session aborts
                 remote_dir_path = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/"
-                                   f"{model_short_name}-{EXPERIMENT}/{top_vt}")
+                                   f"{model_short_name}-{EXPERIMENT}/k={k_sentences}_b={b_ratio}//{vt_dir}")
                 os.makedirs(remote_dir_path, exist_ok=True)
                 remote_file_path = os.path.join(remote_dir_path, csv_name)
             else:  # No Google Drive
