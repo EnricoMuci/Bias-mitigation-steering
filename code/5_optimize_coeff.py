@@ -366,7 +366,7 @@ def get_best_coeffs(mmlu_df=None):
 
                 # injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k={k_sentences}_br={b_ratio}.csv"
 
-                os.makedirs("../cache", exist_ok=True)
+                os.makedirs(f"../cache/{vt}_k={k_sentences}_b={b_ratio}/", exist_ok=True)
                 injected_cache = f"../cache/{vt}_k={k_sentences}_b={b_ratio}/{axis}_injected_k={k_sentences}_b={b_ratio}.csv"
 
                 if os.path.exists(injected_cache):
