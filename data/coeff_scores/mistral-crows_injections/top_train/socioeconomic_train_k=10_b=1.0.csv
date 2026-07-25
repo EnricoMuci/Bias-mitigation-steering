@@ -1,4 +1,0 @@
-k-num-sentences,bias-ratio,coeff,bbq_correct,mmlu_correct,bbq_accuracy,mmlu_accuracy
-10,1.0,-2.0,149,461,0.497,0.476
-10,1.0,-1.8,151,462,0.503,0.477
-10,1.0,-1.6,159,466,0.53,0.481
