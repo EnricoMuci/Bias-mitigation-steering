@@ -96,7 +96,6 @@ class QuantizedSteeringModel(SteeringModel):
         if quantization_config is not None:
             load_kwargs["quantization_config"] = quantization_config
         else:
-            # Solo senza BnB ha senso specificare dtype e spostare il modello
             load_kwargs["torch_dtype"] = torch.float16  # type: ignore
 
         self.model = AutoModelForCausalLM.from_pretrained(load_path, **load_kwargs)
@@ -126,7 +125,13 @@ class QuantizedSteeringModel(SteeringModel):
                 warnings.warn("Trying to rewrap a wrapped model! Try calling .unwrap first.")
 
 
-def create_quantized_model(model_name, model_path, layer_ids=None):
+def create_quantized_model(model_name, model_path, layer_ids=None, quantized=True):
+    if layer_ids is None:
+        layer_ids = [5]
+    if not quantized:
+        return QuantizedSteeringModel(
+            model_path=model_path, layer_ids=layer_ids,
+            model_name=model_name, quantization_config=None)
     try:
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -134,8 +139,6 @@ def create_quantized_model(model_name, model_path, layer_ids=None):
             bnb_4bit_quant_type="nf4",
             bnb_4bit_use_double_quant=True,
         )
-        if layer_ids is None:
-            layer_ids = [5]
         return QuantizedSteeringModel(
             model_path=model_path, layer_ids=layer_ids,
             model_name=model_name, quantization_config=bnb_config)
@@ -144,7 +147,7 @@ def create_quantized_model(model_name, model_path, layer_ids=None):
         traceback.print_exc()
         if STRICT_QUANTIZATION:
             raise
-        return SteeringModel(model_path, [5])  # Second element is arbritary as we're not generating yet
+        return SteeringModel(model_path, [5])
 
 
 def set_steering_layer(model, layer_id):
