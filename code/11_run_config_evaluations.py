@@ -9,7 +9,7 @@ from tqdm import tqdm
 import torch
 from dialz import SteeringVector
 
-from utils_new import new_get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model, \
+from utils_new import get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model, \
     set_steering_layer
 
 # Import functions from the individual evaluation files
@@ -87,7 +87,7 @@ parser.add_argument('--config', type=str, default=None,
                     help='Path to a single config CSV to evaluate. Default: every *.csv in ../data/configs/')
 args = parser.parse_args()
 
-(model_name, model_path) = new_get_args([args.name, args.path])
+(model_name, model_path) = get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)

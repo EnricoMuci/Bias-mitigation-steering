@@ -46,7 +46,7 @@ if args.axes is not None:
 else:
     chosen_axes = bbq_axes
 
-(model_name, model_path) = new_get_args([args.name, args.path])
+(model_name, model_path) = get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 os.makedirs(f'../figs/{model_short_name}', exist_ok=True)
 

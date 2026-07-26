@@ -12,7 +12,7 @@ from tqdm import tqdm
 from datasets import load_dataset
 from dialz import SteeringVector
 from utils import get_output
-from utils_new import REMOTE_DRIVE_THESIS_PROJECT, create_quantized_model, define_custom_tokenizer, get_model_short_name, new_get_args
+from utils_new import REMOTE_DRIVE_THESIS_PROJECT, create_quantized_model, define_custom_tokenizer, get_model_short_name, get_args
 
 transformers.logging.set_verbosity_error()
 
@@ -22,7 +22,7 @@ parser.add_argument('-p', '--path', type=str, default=None)
 parser.add_argument('-c', '--colab', action='store_true')  # flag about colab simulation
 args = parser.parse_args()
 
-(model_name, model_path) = new_get_args([args.name, args.path])
+(model_name, model_path) = get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)

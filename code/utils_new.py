@@ -32,23 +32,12 @@ CROWS_AXIS_MAP = {
     }
 
 
-def new_get_args(args_list: list):
+def get_args(args_list: list):
     model_name = args_list[0]
     model_path = args_list[1]
     return model_name, model_path
 
 
-def OLD_get_args(argv):
-    # TODO: OLD
-    if len(argv) > 2:  # Path and name
-        model_name = argv[1]
-        model_path = argv[2]
-        return model_name, model_path
-    elif len(argv) > 1 or argv[2]:  # Only Name
-        model_name = argv[1]
-        return model_name, model_name
-    else:  # Error
-        raise ValueError("Model name and model path must be provided as command-line arguments.")
 
 
 def choose_axes(axes: list | None = None) -> list:
@@ -58,19 +47,16 @@ def choose_axes(axes: list | None = None) -> list:
         return utils.bbq_axes
 
 
-def get_model_short_name(model_name):
-    # Map model names to short names
+def get_model_short_name(model_name, quantized=True):
     model_short_names = {
         "Qwen/Qwen2.5-7B-Instruct": "qwen",
         "meta-llama/Llama-3.1-8B-Instruct": "llama",
         "mistralai/Mistral-7B-Instruct-v0.1": "mistral",
     }
-
-    model_short_name = model_short_names.get(model_name)
-    if not model_short_name:
+    base_name = model_short_names.get(model_name)
+    if not base_name:
         raise ValueError(f"Unknown model name: {model_name}")
-    else:
-        return model_short_name
+    return base_name if quantized else f"{base_name}-full"
 
 
 class QuantizedSteeringModel(SteeringModel):

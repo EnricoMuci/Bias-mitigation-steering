@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # import torch
 # import sys
 # from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig  # FIXME
-from utils_new import get_model_short_name, new_get_args, define_custom_tokenizer, create_quantized_model
+from utils_new import get_model_short_name, get_args, define_custom_tokenizer, create_quantized_model
 
 load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
@@ -18,7 +18,7 @@ parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Inst
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
 args = parser.parse_args()
 
-(model_name, model_path) = new_get_args([args.name, args.path])
+(model_name, model_path) = get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
