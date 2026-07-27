@@ -12,7 +12,7 @@ from tqdm import tqdm
 from datasets import load_dataset
 from dialz import SteeringVector
 from utils import get_output
-from utils_new import REMOTE_DRIVE_THESIS_PROJECT, create_quantized_model, define_custom_tokenizer, get_model_short_name, get_args
+from utils_new import REMOTE_DRIVE_THESIS_PROJECT, configure_model, define_custom_tokenizer, get_model_short_name, get_args
 
 transformers.logging.set_verbosity_error()
 
@@ -98,7 +98,7 @@ def save_results(results_df, local_file_path, remote_file_path):
 
 def get_best_coeffs():
 
-    model = create_quantized_model(model_name, model_path)
+    model = configure_model(model_name, model_path)
 
     top_files = ["top_train", "top_train+prompt"]
 

@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # import torch
 # import sys
 # from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig  # FIXME
-from utils_new import get_model_short_name, get_args, define_custom_tokenizer, create_quantized_model
+from utils_new import get_model_short_name, get_args, define_custom_tokenizer, configure_model
 
 load_dotenv()
 hf_token = os.getenv("HF_TOKEN")
@@ -23,7 +23,7 @@ model_short_name = get_model_short_name(model_name)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
 
-model = create_quantized_model(model_name, model_path)
+model = configure_model(model_name, model_path)
 
 ## Get baseline first
 def process_row(row):

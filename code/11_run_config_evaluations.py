@@ -9,7 +9,7 @@ from tqdm import tqdm
 import torch
 from dialz import SteeringVector
 
-from utils_new import get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model, \
+from utils_new import get_args, get_model_short_name, define_custom_tokenizer, configure_model, \
     set_steering_layer
 
 # Import functions from the individual evaluation files
@@ -294,7 +294,7 @@ def main():
     # call to set_steering_layer() inside run_evaluations_for_config wraps
     # whichever layer the first axis needs.
     print("Loading base quantized model (once for the whole run)...")
-    model = create_quantized_model(model_name, model_path, layer_ids=[])
+    model = configure_model(model_name, model_path, layer_ids=[])
 
     for config_file in config_files:
         print(f"\n{'=' * 60}")

@@ -3,7 +3,7 @@ import os
 import datetime
 from dialz import SteeringVector
 
-from utils_new import create_quantized_model
+from utils_new import configure_model
 from utils import bbq_axes, load_and_tokenize_contrastive
 from utils_new import get_args, get_model_short_name
 
@@ -23,7 +23,7 @@ VECTOR_DIRS = {
 for d in VECTOR_DIRS.values():
     os.makedirs(d, exist_ok=True)
 
-model = create_quantized_model(model_name, model_path)
+model = configure_model(model_name, model_path)
 
 for axis in bbq_axes:
     print(f"Creating 4 vectors for {axis} at:", datetime.datetime.now())

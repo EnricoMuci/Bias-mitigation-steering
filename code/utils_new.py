@@ -15,7 +15,7 @@ import os
 SEED = 42
 STRICT_QUANTIZATION = os.environ.get("STRICT_QUANTIZATION", "0") == "1"
 REMOTE_DRIVE_THESIS_PROJECT = '/content/drive/MyDrive/ThesisProject'
-EXPERIMENT = 'crows'  # or 'original or 'reproduced'
+EXPERIMENT = 'crows'  # or 'original or 'reproduction'
 VECTOR_TYPES = ['train', 'train+prompt']
 
 CROWS_PATH = '../raw_data/crows/crows_pairs.csv'
@@ -38,8 +38,6 @@ def get_args(args_list: list):
     return model_name, model_path
 
 
-
-
 def choose_axes(axes: list | None = None) -> list:
     if axes is not None:
         return axes.copy()  # list type
@@ -56,7 +54,10 @@ def get_model_short_name(model_name, quantized=True):
     base_name = model_short_names.get(model_name)
     if not base_name:
         raise ValueError(f"Unknown model name: {model_name}")
-    return base_name if quantized else f"{base_name}-full"
+    if quantized:
+        return f"{base_name}-quantized"
+    else:
+        return f"{base_name}-full"
 
 
 class QuantizedSteeringModel(SteeringModel):
@@ -111,7 +112,7 @@ class QuantizedSteeringModel(SteeringModel):
                 warnings.warn("Trying to rewrap a wrapped model! Try calling .unwrap first.")
 
 
-def create_quantized_model(model_name, model_path, layer_ids=None, quantized=True):
+def configure_model(model_name, model_path, layer_ids=None, quantized=True):
     if layer_ids is None:
         layer_ids = [5]
     if not quantized:

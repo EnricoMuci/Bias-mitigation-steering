@@ -9,7 +9,7 @@ from tqdm import tqdm
 import torch
 from dialz import SteeringVector
 
-from utils_new import get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model, \
+from utils_new import get_args, get_model_short_name, define_custom_tokenizer, configure_model, \
     set_steering_layer
 
 # Import functions from the individual evaluation files
@@ -180,7 +180,7 @@ def run_evaluations_for_config(config_file):
             continue
 
         # Load model and vector for this configuration (fresh reload every axis).
-        model = create_quantized_model(model_name, model_path, layer_ids=[layer])
+        model = configure_model(model_name, model_path, layer_ids=[layer])
         vector = SteeringVector.import_gguf(vector_path)
 
         # Initialize result row with config data
