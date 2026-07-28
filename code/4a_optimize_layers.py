@@ -29,7 +29,7 @@ transformers.logging.set_verbosity_error()
 
 import zoneinfo
 
-tz_italy = zoneinfo.ZoneInfo("Europe/Rome")
+tz_set = zoneinfo.ZoneInfo("Europe/Rome") #FIXME : Remove
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--mode', type=str, default='full')  # set at the end of file
@@ -48,16 +48,13 @@ else:
 
 (model_name, model_path) = get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
-os.makedirs(f'../figs/{model_short_name}', exist_ok=True)
+fig_dir = '4-layers'
+os.makedirs(f'../figs/{model_short_name}/{fig_dir}', exist_ok=True)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
 
 
 def preview_status():
-    """
-    Stampa lo stato dei file prodotti da get_linear_separability() e get_acc_change_per_layer()
-    prima di caricare il modello.
-    """
     config = AutoConfig.from_pretrained(model_path)
     num_layers = getattr(config, "n_layer", None) or config.num_hidden_layers
 
@@ -79,7 +76,7 @@ def preview_status():
                 continue
             for vt in ["train", "train+prompt"]:
                 csv_path = f"../data/separability_scores/{model_short_name}/{axis}_{vt}.csv"
-                png_path = f"../figs/{model_short_name}/{axis}_bbq_{vt}.png"
+                png_path = f"../figs/{model_short_name}/{fig_dir}/{axis}_bbq_{vt}.png"
                 csv_ok = os.path.exists(csv_path)
                 png_ok = os.path.exists(png_path)
 
@@ -109,7 +106,6 @@ def preview_status():
             if axis not in bbq_axes:
                 continue
             for vt in set_types:
-                # Cerca prima su Drive (solo se --colab), poi in locale (stessa priorità della resume logic)
                 local_file = f"../data/layer_scores/{model_short_name}/{axis}_{vt}.csv"
 
                 found_path = None
@@ -290,26 +286,26 @@ def visualize_2d_PCA(
 
 
 def get_linear_separability():
-    model = create_quantized_model(model_name, model_path)
+    model = configure_model(model_name, model_path)
 
     ## Feed in model tokenizer and inputs from each contrastive dataset in python file 3
     for axis in chosen_axes:
         if axis not in bbq_axes:  # NEW
             print(f'Axis {axis} is not admitted')
             continue
-        print(f"Creating vector for {axis} at:", datetime.datetime.now(tz=tz_italy))
+        print(f"Creating vector for {axis} at:", datetime.datetime.now(tz=tz_set))
         path = f"../data/bbq_train/{axis}_train.json"
 
         train_dataset = load_and_tokenize_contrastive(model_path, path)
         fig, scores = visualize_2d_PCA(train_dataset, model, tokenizer)
         scores.to_csv(f"../data/separability_scores/{model_short_name}/{axis}_train.csv", index=False)
-        fig.savefig(f"../figs/{model_short_name}/{axis}_bbq_train.png")
+        fig.savefig(f"../figs/{model_short_name}/{fig_dir}/{axis}_bbq_train.png")
 
         train_dataset = load_and_tokenize_contrastive(model_path, path,
                                                       prompt=f"Consider the bias related to {axis} in the following. ")
         fig, scores = visualize_2d_PCA(train_dataset, model, tokenizer)
         scores.to_csv(f"../data/separability_scores/{model_short_name}/{axis}_train+prompt.csv", index=False)
-        fig.savefig(f"../figs/{model_short_name}/{axis}_bbq_train+prompt.png")
+        fig.savefig(f"../figs/{model_short_name}/{fig_dir}/{axis}_bbq_train+prompt.png")
 
 
 ## Get baseline first
@@ -353,7 +349,7 @@ def predict_row(row, model, vector, coeff):
 def get_acc_change_per_layer():
     config = AutoConfig.from_pretrained(model_path)
     num_layers = getattr(config, "n_layer", None) or config.num_hidden_layers
-    model = create_quantized_model(model_name, model_path)
+    model = configure_model(model_name, model_path)
     # model.half()
 
     all_types = ["train", "train+prompt"]  # NEW Block
@@ -447,7 +443,7 @@ def get_acc_change_per_layer():
                         layers[layer] = SteeringModule(layers[layer])
                     # END NEW Wrapping
 
-                    start_time = datetime.datetime.now(tz=tz_italy)
+                    start_time = datetime.datetime.now(tz=tz_set)
                     print(f"\n\n=== layer = {layer} @ {start_time} ===")
 
                     # apply the predictor to every row

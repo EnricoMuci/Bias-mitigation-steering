@@ -15,7 +15,7 @@ import os
 SEED = 42
 STRICT_QUANTIZATION = os.environ.get("STRICT_QUANTIZATION", "0") == "1"
 REMOTE_DRIVE_THESIS_PROJECT = '/content/drive/MyDrive/ThesisProject'
-EXPERIMENT = 'crows'  # or 'original or 'reproduction'
+EXPERIMENT = 'inject-crows'  # or 'original 'reproduction' 'inject-crows'
 VECTOR_TYPES = ['train', 'train+prompt']
 
 CROWS_PATH = '../raw_data/crows/crows_pairs.csv'

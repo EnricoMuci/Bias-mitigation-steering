@@ -13,7 +13,7 @@ from dialz.vector import SteeringModule
 
 from utils import bbq_axes
 from utils import get_output
-from utils_new import (get_args, get_model_short_name, define_custom_tokenizer, create_quantized_model,
+from utils_new import (get_args, get_model_short_name, define_custom_tokenizer, configure_model,
                        model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, CROWS_AXIS_MAP, EXPERIMENT, SEED,
                        CROWS_PATH)
 
@@ -42,7 +42,7 @@ args = parser.parse_args()
 MIN_COEFF = -2.0
 MAX_COEFF = 2.0
 STEP_COEF = 0.2  # use only 1.f format
-NUM_COEFFS = int(round((MAX_COEFF - MIN_COEFF) / STEP_COEF)) + 1
+NUM_COEFF = int(round((MAX_COEFF - MIN_COEFF) / STEP_COEF)) + 1
 
 inject_path = CROWS_PATH
 
@@ -56,10 +56,29 @@ if args.axes is not None:
 else:
     required_axes = bbq_axes
 
-LOCAL_BEST_LAYERS_DIR = f'../data/layer_scores/{model_short_name}/best_layers'
-LOCAL_BBQ_VALIDATE_DIR = f"../data/bbq_validate"  # 1 file for each axis
-LOCAL_COEFF_SCORES_DIR = f'../data/coeff_scores/{model_short_name}-{EXPERIMENT}/k={args.k_sentences}_b={args.bias_ratio}'
+# Injection parameters
+k = args.k_sentences  # top-k sentences
+b = args.bias_ratio  # fraction of pro-stereotyped sentences
+
+BEST_LAYERS_DIR = f'../data/layer_scores/{model_short_name}/best_layers'
+BBQ_VALIDATE_DIR = f"../data/bbq_validate"  # 1 file for each axis
 TOP_VECTOR_TYPES = ["top_train", "top_train+prompt"]
+
+def set_coeff_dir():
+    base_path = f'../data/coeff_scores/{model_short_name}/{EXPERIMENT}'
+    if k > 0 and EXPERIMENT not in ['reproduction', 'original']: # injections
+        coeff_scores_dir = os.path.join(base_path, f"/k-{k}_b-{b}") # add path
+        print(f'Coefficient scores in: {coeff_scores_dir} [K = {k} | B = {b}]')
+        return coeff_scores_dir
+    elif k <= 0 and EXPERIMENT in ['reproduction', 'original']: # no injections
+        print(f'Coefficient scores in: {base_path} [K = 0]')
+        return base_path
+    else: # error
+        print(f'Error! Please check:\nExperiment = {EXPERIMENT}\nK = {k}\nB = {b}\n'
+              f'Fallback on {base_path} but, please, check!')
+        return base_path
+
+COEFF_SCORES_DIR = set_coeff_dir()
 
 
 def resume_logic(axis, remote_file_path, local_file_path, vt):
@@ -81,25 +100,25 @@ def check_paths():
     Path checking
     """
     checked = 0
-    if os.path.exists(LOCAL_BEST_LAYERS_DIR):
+    if os.path.exists(BEST_LAYERS_DIR):
         checked += 1
     else:
-        print(f'Missing this path:\n{LOCAL_BEST_LAYERS_DIR}')
+        print(f"Missing best layers' path:\n{BEST_LAYERS_DIR}")
 
-    if os.path.exists(LOCAL_BBQ_VALIDATE_DIR):
+    if os.path.exists(BBQ_VALIDATE_DIR):
         checked += 1
     else:
-        print(f'Missing BBQ validation set path:\n{LOCAL_BBQ_VALIDATE_DIR}')
+        print(f'Missing BBQ validation set path:\n{BBQ_VALIDATE_DIR}')
 
     try:
-        os.makedirs(LOCAL_COEFF_SCORES_DIR, exist_ok=True)
+        os.makedirs(COEFF_SCORES_DIR, exist_ok=True)
         for vtf in TOP_VECTOR_TYPES:
             vt_dir = vtf.removeprefix("top_")
-            print(f'Creating this directory: {LOCAL_COEFF_SCORES_DIR}/{vt_dir}/')
-            os.makedirs(os.path.join(LOCAL_COEFF_SCORES_DIR, vt_dir), exist_ok=True)
+            print(f'Creating this directory: {COEFF_SCORES_DIR}/{vt_dir}/')
+            os.makedirs(os.path.join(COEFF_SCORES_DIR, vt_dir), exist_ok=True)
         checked += 1
     except Exception as err:
-        print(f'Missing coefficient-scores path:\n{LOCAL_COEFF_SCORES_DIR}. ERROR: {err}')
+        print(f'Missing coefficient-scores path:\n{COEFF_SCORES_DIR}. ERROR: {err}')
 
     if os.path.exists(inject_path):
         checked += 1
@@ -129,7 +148,7 @@ def prepare_MMLU():
                 f"Could not load MMLU locally and download failed "
                 f"(offline mode or no network access?). "
                 f"Place a pre-downloaded file at {mmlu_path} and retry.\n"
-                f"Original error: {err}"
+                f"Original error:\n{err}"
             )
         full_df = pd.DataFrame(mmlu)
         os.makedirs(mmlu_dir, exist_ok=True)
@@ -149,14 +168,14 @@ def prepare_MMLU():
 def preview_status():  # NEW
     """Print a preview of the current status"""
     print("\n" + "=" * 55)
-    print(f"PRE-RUN STATUS CHECK [K = {args.k_sentences}] - [B = {args.bias_ratio}]")
+    print(f"PRE-RUN STATUS CHECK [K = {k}] - [B = {b}]")
     print("=" * 55)
 
     all_done = True
     resume_point = None
 
     for top_vt in TOP_VECTOR_TYPES:
-        top_best_vt_file = f"{LOCAL_BEST_LAYERS_DIR}/{top_vt}.csv"
+        top_best_vt_file = f"{BEST_LAYERS_DIR}/{top_vt}.csv"
         vt_dir = top_vt.removeprefix("top_")  # 'top_train' -> 'train'
         print(f"\n[{top_vt}]")
 
@@ -170,19 +189,22 @@ def preview_status():  # NEW
         for _, row in best_layers.iterrows():
             axis = row['axis']
             vt = row['vt']
-            csv_name = f"{axis}_{vt}_k={args.k_sentences}_b={args.bias_ratio}.csv"  # csv_name = f"{axis}_{vt}.csv"
+            if k > 0:
+                coeff_csv_name = f"{axis}_{vt}_k={k}_b={k}.csv"  # injections
+            else:
+                coeff_csv_name = f"{axis}_{vt}.csv" # no injections
             layer = row['max_layer']
 
             found_path = None
             if args.colab:
                 remote_dir = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/"
-                              f"{model_short_name}-{EXPERIMENT}/{vt_dir}")
-                remote_fp = os.path.join(remote_dir, csv_name)
+                              f"{model_short_name}/{EXPERIMENT}/{vt_dir}")
+                remote_fp = os.path.join(remote_dir, coeff_csv_name)
                 if os.path.exists(remote_fp):
                     found_path = remote_fp
 
             if found_path is None:
-                local_fp = os.path.join(LOCAL_COEFF_SCORES_DIR, vt_dir, csv_name)
+                local_fp = os.path.join(COEFF_SCORES_DIR, vt_dir, coeff_csv_name)
                 if os.path.exists(local_fp):
                     found_path = local_fp
 
@@ -199,10 +221,10 @@ def preview_status():  # NEW
 
                 df = pd.read_csv(found_path)
                 done = len(df)
-                if done >= NUM_COEFFS:
-                    print(f"  ✓ {axis:15s} ({vt})  →  complete ({done}/{NUM_COEFFS})")
+                if done >= NUM_COEFF:
+                    print(f"  ✓ {axis:15s} ({vt})  →  complete ({done}/{NUM_COEFF})")
                 else:
-                    print(f"  ○ {axis:15s} ({vt})  →  partial ({done}/{NUM_COEFFS})")
+                    print(f"  ○ {axis:15s} ({vt})  →  partial ({done}/{NUM_COEFF})")
                     all_done = False
                     if resume_point is None:  # NEW
                         resume_point = {
@@ -216,7 +238,7 @@ def preview_status():  # NEW
     else:
         rp = resume_point
         print(f"Resuming operations from: \n{rp['axis']} ({rp['vt']}, {rp['top_vt']})\n"
-              f"layer {rp['layer']}  →  {rp['done']}/{NUM_COEFFS} coefficients done")
+              f"layer {rp['layer']}  →  {rp['done']}/{NUM_COEFF} coefficients done")
     print("=" * 55 + "\n")
     return all_done
 
@@ -329,10 +351,10 @@ def save_results(results_df, local_file_path, remote_file_path):
 
 
 def get_best_coeffs(mmlu_df=None):
-    model = create_quantized_model(model_name, model_path)  # NEW: Load the model
+    model = configure_model(model_name, model_path)  # NEW: Load the model
 
     for top_vt in TOP_VECTOR_TYPES:  # 'top_train' 'top_train+prompt'
-        top_best_vt_file = f"{LOCAL_BEST_LAYERS_DIR}/{top_vt}.csv"
+        top_best_vt_file = f"{BEST_LAYERS_DIR}/{top_vt}.csv"
         vt_dir = top_vt.removeprefix("top_")
 
         if not os.path.exists(top_best_vt_file):
@@ -356,25 +378,22 @@ def get_best_coeffs(mmlu_df=None):
             layer = row['max_layer']
             vt = row['vt']  # 'train' or 'train+prompt'
 
-            # Injection parameters
-            k_sentences = args.k_sentences  # top-k sentences
-            b_ratio = args.bias_ratio  # fraction of pro- stereotyped sentences
 
             try:  # Load in validation set
-                validation_df = pd.read_csv(f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_validate.csv") # validation samples
+                validation_df = pd.read_csv(f"{BBQ_VALIDATE_DIR}/{axis}_validate.csv") # validation samples
                 crows_df = pd.read_csv(f"{inject_path}") # Database for injections
 
-                # injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k={k_sentences}_br={b_ratio}.csv"
+                # injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k={k}_br={b}.csv"
 
-                os.makedirs(f"../cache/{vt}_k={k_sentences}_b={b_ratio}/", exist_ok=True)
-                injected_cache = f"../cache/{vt}_k={k_sentences}_b={b_ratio}/{axis}_injected_k={k_sentences}_b={b_ratio}.csv"
+                os.makedirs(f"../cache-{EXPERIMENT}/cache_k-{k}_b-{b}/", exist_ok=True)
+                injected_cache = f"../cache-{EXPERIMENT}/cache_k-{k}_b-{b}/{axis}_injected_k-{k}_b-{b}.csv"
 
                 if os.path.exists(injected_cache):
                     validation_df = pd.read_csv(injected_cache)
                 else:
                     validation_df = inject_crows_bias_to_df(
                         validation_df, crows_df, axis,
-                        num_sentences=k_sentences, bias_ratio=b_ratio
+                        num_sentences=k, bias_ratio=b
                     )
                     validation_df.to_csv(injected_cache, index=False)
 
@@ -386,15 +405,15 @@ def get_best_coeffs(mmlu_df=None):
                 continue
 
             # Save paths
-            csv_name = f"{axis}_{vt}_k={k_sentences}_b={b_ratio}.csv"
+            csv_name = f"{axis}_{vt}_k={k}_b={b}.csv"
 
-            local_dir_path = f"{LOCAL_COEFF_SCORES_DIR}/{vt_dir}"  # 'train/' or 'train+prompt/'
+            local_dir_path = f"{COEFF_SCORES_DIR}/{vt_dir}"  # 'train/' or 'train+prompt/'
             os.makedirs(local_dir_path, exist_ok=True)
             local_file_path = os.path.join(local_dir_path, csv_name)
 
             if args.colab:  # In Colab, it creates the remote vt path to manage session aborts
                 remote_dir_path = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/"
-                                   f"{model_short_name}-{EXPERIMENT}/k={k_sentences}_b={b_ratio}//{vt_dir}")
+                                   f"{model_short_name}-{EXPERIMENT}/k={k}_b={b}//{vt_dir}")
                 os.makedirs(remote_dir_path, exist_ok=True)
                 remote_file_path = os.path.join(remote_dir_path, csv_name)
             else:  # No Google Drive
@@ -426,13 +445,13 @@ def get_best_coeffs(mmlu_df=None):
             if type(layers[layer]).__name__ != 'SteeringModule':
                 layers[layer] = SteeringModule(layers[layer])
 
-            all_coeffs = np.linspace(MIN_COEFF, MAX_COEFF, NUM_COEFFS)
+            all_coeffs = np.linspace(MIN_COEFF, MAX_COEFF, NUM_COEFF)
             remaining_coeffs = [c for c in all_coeffs if f"{c:.1f}" not in completed_coeffs]
 
             for coeff in tqdm(
                     remaining_coeffs,
                     desc=f"  Coeffs for {axis} ({vt}): ",
-                    total=NUM_COEFFS,  # max length
+                    total=NUM_COEFF,  # max length
                     initial=len(completed_coeffs),  # initial step
                     leave=False,
                     dynamic_ncols=True,
@@ -468,8 +487,8 @@ def get_best_coeffs(mmlu_df=None):
                     mmlu_accuracy = mmlu_correct / len(mmlu_valid)
 
                     results.append({
-                        'k-num-sentences': k_sentences,
-                        'bias-ratio': b_ratio,
+                        'k-num-sentences': k,
+                        'bias-ratio': b,
                         'coeff': round(coeff, 1),
                         'bbq_correct': int(bbq_correct),  # int
                         'mmlu_correct': int(mmlu_correct),  # int

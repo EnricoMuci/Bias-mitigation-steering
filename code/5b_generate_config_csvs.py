@@ -3,18 +3,48 @@ import os
 import glob
 
 import argparse
+
+
 from utils import bbq_axes
-from utils_new import get_args, get_model_short_name
+from utils_new import get_args, get_model_short_name, EXPERIMENT
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
-parser.add_argument('-p', '--path', type=str, default=None)  # model path
-parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')
+parser.add_argument('-p', '--path', type=str, default=None, help='model path')
+parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
+parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of retrieved sentences')
+parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
 args = parser.parse_args()
 
 (model_name, model_path) = get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name)
 
+# Injection parameters
+k = args.k_sentences  # top-k sentences
+b = args.bias_ratio  # fraction of pro-stereotyped sentences
+
+
+def set_dir_paths():
+    coeff_base_path = f'../data/coeff_scores/{model_short_name}/{EXPERIMENT}'
+    config_base_path = f'../data/configs/{model_short_name}/{EXPERIMENT}'
+    if k > 0 and EXPERIMENT not in ['reproduction', 'original']: # injections
+        coeff_scores_dir = os.path.join(coeff_base_path, f"/k-{k}_b-{b}") # add path
+        print(f'Coefficient scores in: {coeff_scores_dir} [K = {k} | B = {b}]')
+
+        config_dir_path = os.path.join(config_base_path, f"/k-{k}_b-{b}")  # add path
+        print(f'Configurations in: {config_dir_path} [K = {k} | B = {b}]')
+        return coeff_scores_dir, config_dir_path
+
+    elif k <= 0 and EXPERIMENT in ['reproduction', 'original']: # no injections
+        print(f'Coefficient scores in: {coeff_base_path} [K = 0]')
+        print(f'Configurations in: {config_base_path} [K = 0]')
+        return coeff_base_path, config_base_path
+    else: # error
+        print(f'Error! Please check:\nExperiment = {EXPERIMENT}\nK = {k}\nB = {b}\n'
+              f'Fallback on {coeff_base_path} and {config_base_path} but, please, check!')
+        return coeff_base_path, config_base_path
+
+COMPLETE_COEFF_DIR, CONFIG_DIR = set_dir_paths()
 
 def generate_config_csvs():
     """Generate config CSV files for each folder with best results per axis."""
@@ -28,15 +58,14 @@ def generate_config_csvs():
     print(f'\n{len(axes)}configurations to be processed: {axes}\n')
 
     # Get all folders in coeff_scores/mistral
-    top_VT_dirs = [d for d in os.listdir(f'../data/coeff_scores/{model_short_name}') if
-               os.path.isdir(os.path.join(f'../data/coeff_scores/{model_short_name}', d))]
-    top_VT_dirs.sort()
+    coeff_VT_dirs = [d for d in os.listdir(COMPLETE_COEFF_DIR) if os.path.isdir(os.path.join(COMPLETE_COEFF_DIR, d))]
+    coeff_VT_dirs.sort()
 
     # Create configs directory if it doesn't exist
     os.makedirs('../data/configs', exist_ok=True)
 
-    for top_vt in top_VT_dirs:
-        print(f"\nProcessing folder: {top_vt}")
+    for vt_dir in coeff_VT_dirs:
+        print(f"\nProcessing folder: {vt_dir}")
 
         config_data = []
 
@@ -44,7 +73,7 @@ def generate_config_csvs():
             print(f'Processing axis: {axis}')
             # Load the corresponding best layers file
 
-            best_layers_file = f"../data/layer_scores/{model_short_name}/best_layers/{top_vt}.csv"
+            best_layers_file = f"../data/layer_scores/{model_short_name}/best_layers/{vt_dir}.csv"
             if os.path.exists(best_layers_file):
                 best_layers_df = pd.read_csv(best_layers_file)
                 # Find the row for this axis
@@ -60,7 +89,8 @@ def generate_config_csvs():
                 vector_type = None
 
             # Find CSV files for this axis in this folder
-            coeff_csv = f"../data/coeff_scores/{model_short_name}/{top_vt}/{axis}_*.csv"
+            coeff_csv = f"{COMPLETE_COEFF_DIR}/{vt_dir}/{axis}_*.csv"
+
             csv_files = glob.glob(coeff_csv)
 
             if csv_files and layer is not None:
@@ -85,11 +115,11 @@ def generate_config_csvs():
         # Save config CSV for this folder
         if config_data:
             config_df = pd.DataFrame(config_data)
-            config_file = f"../data/configs/{top_vt}.csv"
+            config_file = f"../data/configs/{vt_dir}.csv"
             config_df.to_csv(config_file, index=False)
             print(f"  Saved {len(config_data)} configs to {config_file}")
         else:
-            print(f"  No data found for folder {top_vt}")
+            print(f"  No data found for folder {vt_dir}")
 
 
 def generate_baseline_csv():
@@ -109,7 +139,7 @@ def generate_baseline_csv():
         axes = bbq_axes
     print(f'\n{len(axes)} axes to be processed for baseline: {axes}\n')
 
-    best_layers_file = f"../data/layer_scores/mistral/best_layers/{BASELINE_TOP_VT}.csv"
+    best_layers_file = f"../data/layer_scores/{model_short_name}/best_layers/{BASELINE_TOP_VT}.csv"
     if not os.path.exists(best_layers_file):
         print(f"Missing best layers file: {best_layers_file}. Skipping baseline generation.")
         return
@@ -128,7 +158,7 @@ def generate_baseline_csv():
         layer = axis_row.iloc[0]['max_layer']
         vector_type = axis_row.iloc[0]['vt']  # should be 'train+prompt'
 
-        coeff_csv_pattern = f"../data/coeff_scores/mistral/{BASELINE_TOP_VT}/{axis}_*.csv"
+        coeff_csv_pattern = f"{COMPLETE_COEFF_DIR}/{BASELINE_TOP_VT}/{axis}_*.csv"
         csv_files = glob.glob(coeff_csv_pattern)
 
         if not csv_files:
@@ -160,9 +190,9 @@ def generate_baseline_csv():
         print(f'{axis} baseline correctly processed\n')
 
     if config_data:
-        os.makedirs('../data/configs', exist_ok=True)
+        os.makedirs(f'../{CONFIG_DIR}', exist_ok=True)
         config_df = pd.DataFrame(config_data)
-        config_file = "../data/configs/baselines.csv"
+        config_file = f"../{CONFIG_DIR}/baselines.csv"
         config_df.to_csv(config_file, index=False)
         print(f"  Saved {len(config_data)} baseline configs to {config_file}")
     else:

@@ -6,14 +6,24 @@ import numpy as np
 import os
 from utils import bbq_axes
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-m', '--mode', type=str, default='full')  # set at the end of file
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
+parser.add_argument('-p', '--path', type=str, default=None)  # model path
+args = parser.parse_args()
+
+(model_name, model_path) = get_args([args.name, args.path])
+model_short_name = get_model_short_name(model_name)
+fig_dir = '4-layers'
+
 
 def create_minimal_age_layer_graph(axis):
     """
     Create a minimal version of the age layer graph with green vertical line at layer 13
     """
     # Load data
-    sep_data = pd.read_csv(f'../original/separability_scores/mistral/{axis}_train+prompt.csv')
-    acc_data = pd.read_csv(f'../original/layer_scores/mistral/{axis}_train+prompt.csv')
+    sep_data = pd.read_csv(f'../data/separability_scores/{model_short_name}/{axis}_train+prompt.csv')
+    acc_data = pd.read_csv(f'../data/layer_scores/{model_short_name}/{axis}_train+prompt.csv')
 
     # Create figure with clean minimal design
     fig, ax = plt.subplots(figsize=(7.2, 5.4))
