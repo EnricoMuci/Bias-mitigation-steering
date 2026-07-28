@@ -190,7 +190,7 @@ def preview_status():  # NEW
             axis = row['axis']
             vt = row['vt']
             if k > 0:
-                coeff_csv_name = f"{axis}_{vt}_k={k}_b={k}.csv"  # injections
+                coeff_csv_name = f"{axis}_{vt}_k-{k}_b-{b}.csv"  # injections
             else:
                 coeff_csv_name = f"{axis}_{vt}.csv" # no injections
             layer = row['max_layer']
@@ -405,7 +405,7 @@ def get_best_coeffs(mmlu_df=None):
                 continue
 
             # Save paths
-            csv_name = f"{axis}_{vt}_k={k}_b={b}.csv"
+            csv_name = f"{axis}_{vt}_k-{k}_b-{b}.csv"
 
             local_dir_path = f"{COEFF_SCORES_DIR}/{vt_dir}"  # 'train/' or 'train+prompt/'
             os.makedirs(local_dir_path, exist_ok=True)
@@ -413,7 +413,7 @@ def get_best_coeffs(mmlu_df=None):
 
             if args.colab:  # In Colab, it creates the remote vt path to manage session aborts
                 remote_dir_path = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/"
-                                   f"{model_short_name}-{EXPERIMENT}/k={k}_b={b}//{vt_dir}")
+                                   f"{model_short_name}-{EXPERIMENT}/k-{k}_b-{b}/{vt_dir}")
                 os.makedirs(remote_dir_path, exist_ok=True)
                 remote_file_path = os.path.join(remote_dir_path, csv_name)
             else:  # No Google Drive
