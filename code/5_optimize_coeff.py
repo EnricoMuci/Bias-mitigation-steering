@@ -31,11 +31,11 @@ transformers.logging.set_verbosity_error()
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')
 parser.add_argument('-p', '--path', type=str, default=None, help='model path')
-parser.add_argument('-c', '--colab', action='store_true', help='flag about remote saving')
+parser.add_argument('-c', '--colab', action='store_true', help='Flag about remote saving')
 parser.add_argument('-o', '--only-preview', action='store_true', help='Show only the preview')
 parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of retrieved sentences')
 parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
-parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
+parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='Axes to be processed')
 args = parser.parse_args()
 
 # Coefficient arguments
@@ -383,7 +383,7 @@ def get_best_coeffs(mmlu_df=None):
                 validation_df = pd.read_csv(f"{BBQ_VALIDATE_DIR}/{axis}_validate.csv") # validation samples
                 crows_df = pd.read_csv(f"{inject_path}") # Database for injections
 
-                # injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k={k}_br={b}.csv"
+                # injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k-{k}_b-{b}.csv"
 
                 os.makedirs(f"../cache-{EXPERIMENT}/cache_k-{k}_b-{b}/", exist_ok=True)
                 injected_cache = f"../cache-{EXPERIMENT}/cache_k-{k}_b-{b}/{axis}_injected_k-{k}_b-{b}.csv"
@@ -530,4 +530,4 @@ if __name__ == "__main__":
             else:
                 print("Nothing to do. All work done")
     else:
-        print('Something wrong')
+        print('Something went wrong')
