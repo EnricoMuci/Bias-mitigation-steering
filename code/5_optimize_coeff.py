@@ -67,7 +67,7 @@ TOP_VECTOR_TYPES = ["top_train", "top_train+prompt"]
 def set_coeff_dir():
     base_path = f'../data/coeff_scores/{model_short_name}/{EXPERIMENT}'
     if k > 0 and EXPERIMENT not in ['reproduction', 'original']: # injections
-        coeff_scores_dir = os.path.join(base_path, f"/k-{k}_b-{b}") # add path
+        coeff_scores_dir = os.path.join(base_path, f"k-{k}_b-{b}") # add path
         print(f'Coefficient scores in: {coeff_scores_dir} [K = {k} | B = {b}]')
         return coeff_scores_dir
     elif k <= 0 and EXPERIMENT in ['reproduction', 'original']: # no injections
@@ -118,7 +118,7 @@ def check_paths():
             os.makedirs(os.path.join(COEFF_SCORES_DIR, vt_dir), exist_ok=True)
         checked += 1
     except Exception as err:
-        print(f'Missing coefficient-scores path:\n{COEFF_SCORES_DIR}. ERROR: {err}')
+        print(f'Missing coefficient-scores path: {COEFF_SCORES_DIR}.\nERROR: {err}')
 
     if os.path.exists(inject_path):
         checked += 1

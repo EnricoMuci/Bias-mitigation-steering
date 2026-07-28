@@ -28,10 +28,10 @@ def set_dir_paths():
     coeff_base_path = f'../data/coeff_scores/{model_short_name}/{EXPERIMENT}'
     config_base_path = f'../data/configs/{model_short_name}/{EXPERIMENT}'
     if k > 0 and EXPERIMENT not in ['reproduction', 'original']: # injections
-        coeff_scores_dir = os.path.join(coeff_base_path, f"/k-{k}_b-{b}") # add path
+        coeff_scores_dir = os.path.join(coeff_base_path, f"k-{k}_b-{b}") # add path
         print(f'Coefficient scores in: {coeff_scores_dir} [K = {k} | B = {b}]')
 
-        config_dir_path = os.path.join(config_base_path, f"/k-{k}_b-{b}")  # add path
+        config_dir_path = os.path.join(config_base_path, f"k-{k}_b-{b}")  # add path
         print(f'Configurations in: {config_dir_path} [K = {k} | B = {b}]')
         return coeff_scores_dir, config_dir_path
 
