@@ -29,14 +29,17 @@ transformers.logging.set_verbosity_error()
 
 import zoneinfo
 
-tz_set = zoneinfo.ZoneInfo("Europe/Rome") #FIXME : Remove
+tz_set = zoneinfo.ZoneInfo("Europe/Rome") # FIXME : Remove
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-m', '--mode', type=str, default='full')  # set at the end of file
-parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
-parser.add_argument('-p', '--path', type=str, default=None)  # model path
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1', help='model name')
+parser.add_argument('-p', '--path', type=str, default=None, help='model path')
+parser.add_argument('-q', '--quantization', action='store_true', help='Insert flag to quantize the model')
+
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
 parser.add_argument('-t', '--type', type=int, default=2, help='train[+prompt] → get_acc_change_per_layer')
+parser.add_argument('-m', '--mode', type=str, default='both', help="['layer', 'separability', 'both']")  # set at the end of file
+
 parser.add_argument('-c', '--colab', action='store_true', help='executing on Colab')
 parser.add_argument('-o', '--only-preview', action='store_true', help='only preview')
 args = parser.parse_args()
@@ -46,8 +49,11 @@ if args.axes is not None:
 else:
     chosen_axes = bbq_axes
 
+QUANTIZATION = args.quantization
+
 (model_name, model_path) = get_args([args.name, args.path])
-model_short_name = get_model_short_name(model_name)
+model_short_name = get_model_short_name(model_name, quantized=QUANTIZATION)
+
 fig_dir = '4-layers'
 os.makedirs(f'../figs/{model_short_name}/{fig_dir}', exist_ok=True)
 
@@ -65,7 +71,7 @@ def preview_status():
         set_types = [all_types[args.type]]
 
     # ── SEPARABILITY ──────────────────────────────────────────────
-    if args.mode in ['separability', 'full']:
+    if args.mode in ['separability', 'both']:
         print("\n" + "=" * 55)
         print("SEPARABILITY STATUS  (get_linear_separability)")
         print("=" * 55)
@@ -95,7 +101,7 @@ def preview_status():
             print("\n  All separability files are done.")
 
     # ── LAYER ACCURACY ────────────────────────────────────────────
-    if args.mode in ['layer', 'full']:
+    if args.mode in ['layer', 'both']:
         print("\n" + "=" * 55)
         print(f"LAYER ACCURACY STATUS  (get_acc_change_per_layer)")
         print(f"Total layers: {num_layers - 1}  (layer 1 → {num_layers - 1})")
@@ -286,7 +292,7 @@ def visualize_2d_PCA(
 
 
 def get_linear_separability():
-    model = configure_model(model_name, model_path)
+    model = configure_model(model_name, model_path, quantized=QUANTIZATION)
 
     ## Feed in model tokenizer and inputs from each contrastive dataset in python file 3
     for axis in chosen_axes:
@@ -484,7 +490,7 @@ if __name__ == '__main__':  # FIXME
     preview_status()
 
     if not args.only_preview:
-        if args.mode in ['separability', 'full']:
+        if args.mode in ['separability', 'both']:
             get_linear_separability()
-        if args.mode in ['layer', 'full']:
+        if args.mode in ['layer', 'both']:
             get_acc_change_per_layer()

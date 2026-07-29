@@ -9,15 +9,18 @@ from utils import bbq_axes
 from utils_new import get_args, get_model_short_name, EXPERIMENT
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1', help='model name')
 parser.add_argument('-p', '--path', type=str, default=None, help='model path')
+parser.add_argument('-q', '--quantization', action='store_true', help='Insert flag to quantize the model')
+
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
 parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of retrieved sentences')
 parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
 args = parser.parse_args()
 
+QUANTIZATION = args.quantization
 (model_name, model_path) = get_args([args.name, args.path])
-model_short_name = get_model_short_name(model_name)
+model_short_name = get_model_short_name(model_name, quantized=QUANTIZATION)
 
 # Injection parameters
 k = args.k_sentences  # top-k sentences
