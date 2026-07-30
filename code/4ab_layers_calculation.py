@@ -15,7 +15,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
 
 from utils import load_and_tokenize_contrastive, get_output, bbq_axes
-from utils_new import *
+from utils_new import (get_args, get_model_short_name, define_custom_tokenizer, configure_model,
+                       EXPERIMENT, REMOTE_DRIVE_THESIS_PROJECT, model_layer_list) # FIXME: model_layer_list importing
+
 from transformers import AutoConfig
 
 import warnings
