@@ -7,7 +7,7 @@ from utils import bbq_axes
 from utils_new import get_args, get_model_short_name, configure_model, load_and_tokenize_contrastive
 
 
-transformers.logging.set_verbosity_error()
+transformers.logging.set_verbosity_info()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1', help='model name')
