@@ -46,7 +46,7 @@ parser.add_argument('-q', '--quantization', action='store_true', help='Insert fl
 
 parser.add_argument('-t', '--type', type=int, default=2, help='train[+prompt] → in get_acc_change_per_layer')
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
-parser.add_argument('-m', '--mode', nargs='*', type=str, default=None, help="['layer', 'separability', 'best']")
+parser.add_argument('-m', '--mode', nargs='*', type=str, default=[], help="['layer', 'separability', 'best']")
 
 parser.add_argument('-c', '--colab', action='store_true', help='executing on Colab')
 parser.add_argument('-o', '--only-preview', action='store_true', help='only preview')
@@ -76,6 +76,118 @@ os.makedirs(LAYERS_PATH, exist_ok=True)
 
 
 def preview_status():
+    config = AutoConfig.from_pretrained(model_path)
+    num_layers = getattr(config, "n_layer", None) or config.num_hidden_layers
+
+    if args.type == 2:
+        set_types = VECTOR_TYPES.copy()
+    else:
+        set_types = [VECTOR_TYPES[args.type]]
+
+    # ── SEPARABILITY ──────────────────────────────────────────────
+    if 'separability' in OPERATIONS:
+        print("\n" + "=" * 65)
+        print("SEPARABILITY STATUS  (get_linear_separability)")
+        print("=" * 65)
+
+        sep_data = []
+        for axis in chosen_axes:
+            if axis not in bbq_axes:
+                continue
+            for vt in ["train", "train+prompt"]:
+                csv_path = f"{SEPARABILITY_PATH}/{axis}_{vt}.csv"
+                png_path = f"{FIGS_PATH}/{axis}_bbq_{vt}.png"
+                csv_ok = os.path.exists(csv_path)
+                png_ok = os.path.exists(png_path)
+
+                if csv_ok and png_ok:
+                    df = pd.read_csv(csv_path)
+                    status = "Complete"
+                    details = f"{len(df)} layers"
+                elif csv_ok or png_ok:
+                    status = "Partial"
+                    details = f"csv={'Yes' if csv_ok else 'No'}, png={'Yes' if png_ok else 'No'}"
+                else:
+                    status = "Not started"
+                    details = "-"
+
+                sep_data.append({
+                    "Axis": axis,
+                    "Vector": vt,
+                    "Status": status,
+                    "Details": details
+                })
+
+        if sep_data:
+            sep_df = pd.DataFrame(sep_data)
+            print(sep_df.to_string(index=False))
+            if all(s["Status"] == "Complete" for s in sep_data):
+                print("\nAll separability files are done.")
+        else:
+            print("No axes selected for separability.")
+
+    # ── LAYER ACCURACY ────────────────────────────────────────────
+    if 'layer' in OPERATIONS:
+        print("\n" + "=" * 65)
+        print(f"LAYER ACCURACY STATUS  (get_acc_change_per_layer)")
+        print(f"Total layers: {num_layers - 1}  (layer 1 → {num_layers - 1})")
+        print("=" * 65)
+
+        layer_data = []
+        expected = num_layers - 1
+
+        for axis in chosen_axes:
+            if axis not in bbq_axes:
+                continue
+            for vt in set_types:
+                local_file = f"{LAYERS_PATH}/{axis}_{vt}.csv"
+                found_path = None
+                source = "-"
+
+                if args.colab:
+                    remote_file = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/"
+                                   f"{model_short_name}-{EXPERIMENT}/{axis}_{vt}.csv")
+                    if os.path.exists(remote_file):
+                        found_path = remote_file
+                        source = "Drive"
+
+                if found_path is None and os.path.exists(local_file):
+                    found_path = local_file
+                    source = "Local"
+
+                if found_path is None:
+                    status = "Not started"
+                    progress = f"0/{expected}"
+                else:
+                    df = pd.read_csv(found_path)
+                    done = len(df)
+                    progress = f"{done}/{expected}"
+
+                    if done >= expected:
+                        status = "Complete"
+                    else:
+                        next_layer = int(df['layer'].max()) + 1
+                        status = f"Partial (Resume from {next_layer})"
+
+                layer_data.append({
+                    "Axis": axis,
+                    "Vector": vt,
+                    "Status": status,
+                    "Progress": progress,
+                    "Source": source
+                })
+
+        if layer_data:
+            layer_df = pd.DataFrame(layer_data)
+            print(layer_df.to_string(index=False))
+            if all("Complete" in s["Status"] for s in layer_data):
+                print("\nAll layers are complete.")
+        else:
+            print("No axes selected for layers.")
+
+    print("\n" + "=" * 65 + "\n")
+
+def old_preview_status():
     config = AutoConfig.from_pretrained(model_path)
     num_layers = getattr(config, "n_layer", None) or config.num_hidden_layers
 
@@ -127,7 +239,7 @@ def preview_status():
             if axis not in bbq_axes:
                 continue
             for vt in set_types:
-                local_file = f"../data/layer_scores/{model_short_name}/{axis}_{vt}.csv"
+                local_file = f"{LAYERS_PATH}/{axis}_{vt}.csv"
 
                 found_path = None
                 source = ""
