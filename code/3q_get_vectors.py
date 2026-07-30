@@ -3,8 +3,8 @@ import os
 import datetime
 from dialz import SteeringVector
 
-from utils import bbq_axes, load_and_tokenize_contrastive
-from utils_new import get_args, get_model_short_name, configure_model
+from utils import bbq_axes
+from utils_new import get_args, get_model_short_name, configure_model, load_and_tokenize_contrastive
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1', help='model name')
@@ -37,13 +37,14 @@ for axis in chosen_axes:
 
     ## BBQ Type Datasets - Ambig + Disambig
     filepath = f"../data/bbq_train/{axis}_train.json"
-    train_dataset = load_and_tokenize_contrastive(model_name, filepath)
+    train_dataset = load_and_tokenize_contrastive(model_name, model_path, filepath)
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(VECTOR_DIRS['train'], f"{axis}.gguf"))
 
     ## BBQ + Prompt Type Datasets - Ambig + Disambig
     filepath = f"../data/bbq_train/{axis}_train.json"
-    train_dataset = load_and_tokenize_contrastive(model_name, filepath,
+    train_dataset = load_and_tokenize_contrastive(model_name, model_path, filepath,
                                                   prompt=f"Consider the bias related to {axis} in the following. ")
     vector = SteeringVector.train(model, train_dataset)
     vector.export_gguf(os.path.join(VECTOR_DIRS['train+prompt'], f"{axis}.gguf"))
+

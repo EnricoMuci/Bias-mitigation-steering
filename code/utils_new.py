@@ -4,7 +4,7 @@ import torch
 import typing
 import warnings
 
-from dialz import SteeringModel
+from dialz import SteeringModel, Dataset
 from dialz.vector import SteeringModule, model_layer_list
 from tqdm.auto import tqdm
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
@@ -157,10 +157,36 @@ def set_steering_layer(model, layer_id):
     return model
 
 
-def define_custom_tokenizer(model_name: str, model_path: str = None) -> AutoTokenizer:
+def define_custom_tokenizer(model_name: str, model_path: str | None = None, token = None) -> AutoTokenizer:
     if model_path is not None:  # custom tokenizer
         tokenizer = AutoTokenizer.from_pretrained(model_path)  # Loaded model
     else:
         tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.pad_token_id = tokenizer.eos_token_id
     return tokenizer
+
+
+def load_and_tokenize_contrastive(model_name: str, model_path: str, filepath: str, prompt: str = "") -> Dataset:
+    ds_raw = Dataset.load_from_file(filepath)
+
+    # tokenizer = AutoTokenizer.from_pretrained(model_path, token=hf_token)
+    # tokenizer.pad_token_id = tokenizer.eos_token_id
+    tokenizer = define_custom_tokenizer(model_name, model_path)
+
+    ds_tok = Dataset()
+    for entry in ds_raw.view_dataset():
+        pos_tok = Dataset._apply_chat_template(
+            tokenizer=tokenizer,
+            system_role="",
+            content1="",
+            content2=prompt + entry.positive
+        )
+        neg_tok = Dataset._apply_chat_template(
+            tokenizer=tokenizer,
+            system_role="",
+            content1="",
+            content2=prompt + entry.negative
+        )
+        ds_tok.add_entry(pos_tok, neg_tok)
+
+    return ds_tok
