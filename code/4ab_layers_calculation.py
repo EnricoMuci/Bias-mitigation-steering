@@ -81,6 +81,147 @@ os.makedirs(LAYERS_PATH, exist_ok=True)
 
 
 def preview_status():
+    """
+    Displays a summary status table of missing/completed calculations
+    and the best layer found (if computed).
+    """
+    config = AutoConfig.from_pretrained(model_path)
+    num_layers = getattr(config, "n_layer", None) or config.num_hidden_layers
+
+    if args.type == 2:
+        set_types = VECTOR_TYPES.copy()
+    else:
+        set_types = [VECTOR_TYPES[args.type]]
+
+    # ── SEPARABILITY STATUS ─────────────────────────────────────────
+    if OPERATIONS and 'separability' in OPERATIONS:
+        print("\n" + "=" * 70)
+        print("SEPARABILITY STATUS  (get_linear_separability)")
+        print("=" * 70)
+
+        sep_data = []
+        for axis in chosen_axes:
+            if axis not in bbq_axes:
+                continue
+            for vt in ["train", "train+prompt"]:
+                csv_path = f"{SEPARABILITY_PATH}/{axis}_{vt}.csv"
+                png_path = f"{FIGS_PATH}/{axis}_bbq_{vt}.png"
+                csv_ok = os.path.exists(csv_path)
+                png_ok = os.path.exists(png_path)
+
+                if csv_ok and png_ok:
+                    try:
+                        df = pd.read_csv(csv_path)
+                        status = "Complete"
+                        details = f"{len(df)} layers"
+                    except Exception:
+                        status = "Error reading CSV"
+                        details = "-"
+                elif csv_ok or png_ok:
+                    status = "Partial"
+                    details = f"csv={'Yes' if csv_ok else 'No'}, png={'Yes' if png_ok else 'No'}"
+                else:
+                    status = "Not started"
+                    details = "-"
+
+                sep_data.append({
+                    "Axis": axis,
+                    "Vector": vt,
+                    "Status": status,
+                    "Details": details
+                })
+
+        if sep_data:
+            sep_df = pd.DataFrame(sep_data)
+            print(sep_df.to_string(index=False))
+        else:
+            print("No axes selected for separability.")
+
+    # ── LAYER ACCURACY & BEST LAYER STATUS ─────────────────────────
+    if OPERATIONS and 'layer' in OPERATIONS:
+        print("\n" + "=" * 70)
+        print(f"LAYER ACCURACY & BEST LAYER STATUS")
+        print(f"Total layers: {num_layers - 1}  (layer 1 -> {num_layers - 1})")
+        print("=" * 70)
+
+        layer_data = []
+        expected = num_layers - 1
+
+        for vt in set_types:
+            # Check if best_layers file exists for this vector type
+            best_file_path = f"{LAYERS_PATH}/best_layers/top_{vt}.csv"
+            best_layers_map = {}
+
+            if os.path.exists(best_file_path):
+                try:
+                    best_df = pd.read_csv(best_file_path)
+                    if 'axis' in best_df.columns and 'max_layer' in best_df.columns:
+                        best_layers_map = dict(zip(best_df['axis'], best_df['max_layer']))
+                except Exception:
+                    best_layers_map = {}
+
+            for axis in chosen_axes:
+                if axis not in bbq_axes:
+                    print(f"{axis} doesn't exist in BBQ")
+                    continue
+
+                local_file = f"{LAYERS_PATH}/{axis}_{vt}.csv"
+                found_path = None
+                source = "-"
+
+                if args.colab:
+                    remote_file = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/"
+                                   f"{model_short_name}-{BASE_EXPERIMENT}/{axis}_{vt}.csv")
+                    if os.path.exists(remote_file):
+                        found_path = remote_file
+                        source = "Drive"
+
+                if found_path is None and os.path.exists(local_file):
+                    found_path = local_file
+                    source = "Local"
+
+                if found_path is None:
+                    status = "Not started"
+                    progress = f"0/{expected}"
+                else:
+                    try:
+                        df = pd.read_csv(found_path)
+                        done = len(df)
+                        progress = f"{done}/{expected}"
+
+                        if done >= expected:
+                            status = "Complete"
+                        else:
+                            next_layer = int(df['layer'].max()) + 1 if 'layer' in df.columns else 1
+                            status = f"Partial (Resume from {next_layer})"
+                    except Exception:
+                        status = "Error reading CSV"
+                        progress = f"0/{expected}"
+
+                # Extract best layer if available, otherwise mark with 'X'
+                if axis in best_layers_map:
+                    best_layer_val = str(best_layers_map[axis])
+                else:
+                    best_layer_val = "X"
+
+                layer_data.append({
+                    "Axis": axis,
+                    "Vector": vt,
+                    "Status": status,
+                    "Progress": progress,
+                    "Best Layer": best_layer_val,
+                    "Source": source
+                })
+
+        if layer_data:
+            layer_df = pd.DataFrame(layer_data)
+            print(layer_df.to_string(index=False))
+        else:
+            print("No axes selected for layers.")
+
+    print("\n" + "=" * 70 + "\n")
+
+def old_preview_status():
     config = AutoConfig.from_pretrained(model_path)
     num_layers = getattr(config, "n_layer", None) or config.num_hidden_layers
 
@@ -191,93 +332,6 @@ def preview_status():
             print("No axes selected for layers.")
 
     print("\n" + "=" * 65 + "\n")
-
-def old_preview_status():
-    config = AutoConfig.from_pretrained(model_path)
-    num_layers = getattr(config, "n_layer", None) or config.num_hidden_layers
-
-
-    if args.type == 2:
-        set_types = VECTOR_TYPES.copy()
-    else:
-        set_types = [VECTOR_TYPES[args.type]]
-
-    # ── SEPARABILITY ──────────────────────────────────────────────
-    if 'separability' in OPERATIONS:
-        print("\n" + "=" * 55)
-        print("SEPARABILITY STATUS  (get_linear_separability)")
-        print("=" * 55)
-
-        sep_all_done = True
-        for axis in chosen_axes:
-            if axis not in bbq_axes:
-                continue
-            for vt in ["train", "train+prompt"]:
-                csv_path = f"{SEPARABILITY_PATH}/{axis}_{vt}.csv"
-                png_path = f"{FIGS_PATH}/{axis}_bbq_{vt}.png"
-                csv_ok = os.path.exists(csv_path)
-                png_ok = os.path.exists(png_path)
-
-                if csv_ok and png_ok:
-                    df = pd.read_csv(csv_path)
-                    print(f"  ✓ {axis:15s}  {vt:12s}   →  complete ({len(df)} layer)")
-                elif csv_ok or png_ok:
-                    print(f"  ○ {axis:15s}  {vt:12s}   →  partial " 
-                          f"(csv={'✓' if csv_ok else '✗'}, png={'✓' if png_ok else '✗'})")
-                    sep_all_done = False
-                else:
-                    print(f"  ✗ {axis:15s} ({vt:12s})  →  not started") # ○
-                    sep_all_done = False
-
-        if sep_all_done:
-            print("\n  All separability files are done.")
-
-    # ── LAYER ACCURACY ────────────────────────────────────────────
-    if 'layer' in OPERATIONS:
-        print("\n" + "=" * 55)
-        print(f"LAYER ACCURACY STATUS  (get_acc_change_per_layer)")
-        print(f"Total layers: {num_layers - 1}  (layer 1 → {num_layers - 1})")
-        print("=" * 55)
-
-        layer_all_done = True
-        for axis in chosen_axes:
-            if axis not in bbq_axes:
-                continue
-            for vt in set_types:
-                local_file = f"{LAYERS_PATH}/{axis}_{vt}.csv"
-
-                found_path = None
-                source = ""
-                if args.colab:
-                    remote_file = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/"
-                                   f"{model_short_name}-{BASE_EXPERIMENT}/{axis}_{vt}.csv")
-                    if os.path.exists(remote_file):
-                        found_path = remote_file
-                        source = "Drive"
-                if found_path is None and os.path.exists(local_file):
-                    found_path = local_file
-                    source = "Local"
-
-                if found_path is None:
-                    print(f"  ○ {axis:15s} ({vt:12s})  →  not started")
-                    layer_all_done = False
-                else:
-                    df = pd.read_csv(found_path)
-                    done = len(df)
-                    expected = num_layers - 1
-                    if done >= expected:
-                        print(f"  ✓ {axis:15s} ({vt:12s})  →  complete "
-                              f"({done}/{expected} layer) [{source}]")
-                    else:
-                        next_layer = int(df['layer'].max()) + 1
-                        print(f"  … {axis:15s} ({vt:12s})  →  partial "
-                              f"({done}/{expected} layers done, resuming from layer {next_layer}) [{source}]")
-                        layer_all_done = False
-
-        if layer_all_done:
-            print("\n  All layers are complete.")
-
-    print("=" * 55 + "\n")
 
 
 def batched_get_hiddens(
@@ -609,14 +663,20 @@ def get_acc_change_per_layer():
 
 def find_best_layers():
 
-    # csv_path = f'../data/separability_scores/{model_short_name}/'
-
     results_train = []
     results_train_prompt = []
 
     for axis in chosen_axes:
         for vt in VECTOR_TYPES: # train and train+prompt
-            acc_df = pd.read_csv(f"{LAYERS_PATH}/{axis}_{vt}.csv")
+            layer_csv = f"{LAYERS_PATH}/{axis}_{vt}.csv"
+
+            if not os.path.exists(layer_csv):
+                print(f"[WARNING] Skipping best layer for {axis} ({vt}): file not found at {layer_csv}")
+                continue
+
+            acc_df = pd.read_csv(layer_csv)
+
+
             max_acc = acc_df['bbq_accuracy'].max()
             max_layer = acc_df.loc[acc_df['bbq_accuracy'].idxmax(), 'layer']
 
@@ -643,14 +703,6 @@ def find_best_layers():
     os.makedirs(f'{LAYERS_PATH}/best_layers', exist_ok=True)
     results_train_df.to_csv(f'{LAYERS_PATH}/best_layers/top_train.csv', index=False)
     results_train_prompt_df.to_csv(f'{LAYERS_PATH}/best_layers/top_train+prompt.csv', index=False)
-
-    # results_train_df.to_csv(f'{LAYERS_PATH}/best_layers/top_train.csv')
-    # results_train_prompt_df.to_csv(f'{LAYERS_PATH}/best_layers/top_train+prompt.csv')
-
-    # results_train_df.to_csv(
-    #     f'{colab_repo_dir}/{layers_path}/{model_short_name}/best_layers/top_train.csv')  # save results in colab (train)
-    # results_train_prompt_df.to_csv(
-    #     f'{colab_repo_dir}/{layers_path}/{model_short_name}/best_layers/top_train+prompt.csv')  # save results in Colab (train+prompt)
 
 
 if __name__ == '__main__':  # FIXME
