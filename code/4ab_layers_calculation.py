@@ -614,7 +614,7 @@ def find_best_layers():
     results_train = []
     results_train_prompt = []
 
-    for axis in bbq_axes:
+    for axis in chosen_axes:
         for vt in VECTOR_TYPES: # train and train+prompt
             acc_df = pd.read_csv(f"{LAYERS_PATH}/{axis}_{vt}.csv")
             max_acc = acc_df['bbq_accuracy'].max()
