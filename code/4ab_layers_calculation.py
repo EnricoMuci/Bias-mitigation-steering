@@ -22,6 +22,7 @@ import tqdm
 
 from utils import load_and_tokenize_contrastive, get_output, bbq_axes
 from utils_new import (get_args, get_model_short_name, define_custom_tokenizer, configure_model,
+                       check_model_quantization,
                        BASE_EXPERIMENT, REMOTE_DRIVE_THESIS_PROJECT, model_layer_list) # FIXME: model_layer_list importing
 
 
@@ -542,6 +543,8 @@ def get_acc_change_per_layer():
     config = AutoConfig.from_pretrained(model_path)
     num_layers = getattr(config, "n_layer", None) or config.num_hidden_layers
     model = configure_model(model_name, model_path, quantized=QUANTIZATION)
+    check_model_quantization(model)
+
     # model.half()
 
     all_types = ["train", "train+prompt"]  # NEW Block

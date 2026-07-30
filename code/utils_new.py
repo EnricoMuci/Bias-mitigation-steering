@@ -68,7 +68,7 @@ class CustomSteeringModel(SteeringModel):
             model_path: str | None = None,
             token: str | None = None,
             quantization_config: BitsAndBytesConfig | None = None,
-            torch_dtype: torch.dtype = torch.float16,
+            torch_dtype: torch.dtype = 'auto' #torch.float16,
     ):
         # Directly call nn.Module.__init__() to bypass SteeringModel default loader
         torch.nn.Module.__init__(self)
@@ -123,12 +123,34 @@ class CustomSteeringModel(SteeringModel):
                 warnings.warn("Attempting to rewrap an already wrapped layer! Call .unwrap first.")
 
 
+def check_model_quantization(model):
+    # Check 1: Does it have a quantization config attached?
+    if hasattr(model, "config") and hasattr(model.config, "quantization_config"):
+        print("Warning: Model configuration contains a quantization_config!")
+        print(model.config.quantization_config)
+    else:
+        print("Model configuration is clean. No quantization_config found.")
+
+    # Check 2: Inspect the actual weights of the first Linear layer
+    for name, module in model.named_modules():
+        if "Linear" in str(type(module)):
+            weight_dtype = module.weight.dtype
+            print(f"First linear layer ('{name}') weight dtype: {weight_dtype}")
+
+            # Types like uint8, int8, or int4 indicate quantization
+            if weight_dtype in [torch.float16, torch.bfloat16, torch.float32]:
+                print(f"Model weights are in standard float precision. Dtype: {weight_dtype}")
+            else:
+                print(f"Model appears to be quantized: Dtype: {weight_dtype}")
+            break  # We only need to check the first one
+
+
 def configure_model(
         model_name: str,
         model_path: str,
         layer_ids: list[int] | None = None,
         quantized: bool = True
-) -> CustomSteeringModel:
+    ) -> CustomSteeringModel:
     if layer_ids is None:
         layer_ids = [5]
 
