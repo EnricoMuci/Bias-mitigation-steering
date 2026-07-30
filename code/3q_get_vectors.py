@@ -6,6 +6,9 @@ from dialz import SteeringVector
 from utils import bbq_axes
 from utils_new import get_args, get_model_short_name, configure_model, load_and_tokenize_contrastive
 
+
+transformers.logging.set_verbosity_error()
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1', help='model name')
 parser.add_argument('-p', '--path', type=str, default=None, help='model path')
