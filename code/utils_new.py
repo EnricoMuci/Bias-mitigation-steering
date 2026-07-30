@@ -86,7 +86,9 @@ class QuantizedSteeringModel(SteeringModel):
         else:
             load_kwargs["torch_dtype"] = torch.float16  # type: ignore
 
+        print(f"Loading weights from {load_path}", flush=True)
         self.model = AutoModelForCausalLM.from_pretrained(load_path, **load_kwargs)
+        print(f"Weights loading from {load_path} completed", flush=True)
 
         if quantization_config is None:
             self.model = self.model.to(
@@ -114,12 +116,16 @@ class QuantizedSteeringModel(SteeringModel):
 
 
 def configure_model(model_name, model_path, layer_ids=None, quantized=True):
+
     if layer_ids is None:
         layer_ids = [5]
     if not quantized:
+        print(f"Configuring {model_name}-full from {model_path}")
         return QuantizedSteeringModel(
             model_path=model_path, layer_ids=layer_ids,
             model_name=model_name, quantization_config=None)
+    else:
+        print(f"Configuring {model_name}-quantized from {model_path}")
     try:
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -131,7 +137,7 @@ def configure_model(model_name, model_path, layer_ids=None, quantized=True):
             model_path=model_path, layer_ids=layer_ids,
             model_name=model_name, quantization_config=bnb_config)
     except Exception as e:
-        tqdm.write(f"[FALLBACK NON QUANTIZED] {model_name}: {type(e).__name__}: {e}")
+        tqdm.write(f"[FALLBACK - NOT QUANTIZED] {model_name}: {type(e).__name__}: {e}")
         traceback.print_exc()
         if STRICT_QUANTIZATION:
             raise
