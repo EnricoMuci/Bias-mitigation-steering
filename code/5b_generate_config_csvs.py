@@ -58,7 +58,7 @@ def generate_config_csvs():
         axes = args.axes.copy()  # list type
     else:
         axes = bbq_axes # all BBQ  axes from utils
-    print(f'\n{len(axes)}configurations to be processed: {axes}\n')
+    print(f'\n{len(axes)} configurations to be processed: {axes}\n')
 
     # Get all folders in coeff_scores/mistral
     coeff_VT_dirs = [d for d in os.listdir(COMPLETE_COEFF_DIR) if os.path.isdir(os.path.join(COMPLETE_COEFF_DIR, d))]

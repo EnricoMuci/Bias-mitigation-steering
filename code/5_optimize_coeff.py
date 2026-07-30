@@ -41,6 +41,8 @@ parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of 
 parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
 args = parser.parse_args()
 
+QUANTIZATION = args.quantization
+
 # Coefficient arguments
 MIN_COEFF = -2.0
 MAX_COEFF = 2.0

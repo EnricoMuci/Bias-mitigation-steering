@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 import shutil
 
-from dialz import SteeringVector
+from dialz import SteeringVector, SteeringModel
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score

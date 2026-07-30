@@ -13,32 +13,64 @@ import os
 import numpy as np
 import matplotlib
 
-from utils_new import choose_axes
+from utils_new import choose_axes, EXPERIMENT,  QuantizedSteeringModel, get_model_short_name, get_args
 
 matplotlib.use('Agg')  # Use non-interactive backend
 
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
-parser.add_argument('-p', '--path', type=str, default=None)  # model path
-parser.add_argument('-a', '--axes', nargs='*', type=str, default=None)  # axes to be processed
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1', help='model name')
+parser.add_argument('-p', '--path', type=str, default=None, help='model path')
+parser.add_argument('-q', '--quantization', action='store_true', help='Insert flag to quantize the model')
+
+parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='Axes to be processed')
+parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of retrieved sentences')
+parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
 args = parser.parse_args()
 
+QUANTIZATION = args.quantization
+(model_name, model_path) = get_args([args.name, args.path])
+model_short_name = get_model_short_name(model_name, quantized=QUANTIZATION)
 
-def load_coeff_scores(axis, vector_type='train+prompt', model='mistral'):
+FIGS_PATH = f"../figs/{model_short_name}/{EXPERIMENT}"
+os.makedirs(FIGS_PATH, exist_ok=True)
+OUTPUT_PATH = f"../figs/{model_short_name}/{EXPERIMENT}/5c-coeff-figs"
+os.makedirs(OUTPUT_PATH, exist_ok=True)
+
+k = args.k_sentences  # top-k sentences
+b = args.bias_ratio  # fraction of pro-stereotyped sentences
+
+
+def define_paths():
+    base_coeff_path = f"../data/coeff_scores/{model_short_name}/{EXPERIMENT}"
+    if k > 0:  # injections:
+        full_coeff_path = os.path.join(base_coeff_path, f"k-{k}_b-{b}")
+    else:
+        full_coeff_path = base_coeff_path
+
+    return full_coeff_path
+
+COEFF_PATH = define_paths()
+
+def load_coeff_scores(axis, vector_type='train+prompt'):
     """Load coefficient scores for a specific axis."""
-    file_path = f"../data/coeff_scores/{model}/top_{vector_type}/{axis}_{vector_type}.csv"
-    
-    if not os.path.exists(file_path):
-        print(f"Warning: File not found: {file_path}")
+    # file_path = f"../data/coeff_scores/{model}/top_{vector_type}/{axis}_{vector_type}.csv"
+
+    if k > 0:  # injections
+        coeff_csv_path = os.path.join(COEFF_PATH, f"{vector_type}/{axis}_{vector_type}_k-{k}_b-{b}.csv")
+    else:
+        coeff_csv_path = os.path.join(COEFF_PATH, f"{vector_type}/{axis}_{vector_type}.csv")
+
+    if not os.path.exists(coeff_csv_path):
+        print(f"Warning: File not found: {coeff_csv_path}")
         return None
     
     try:
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(coeff_csv_path)
         return df
     except Exception as e:
-        print(f"Error loading {file_path}: {e}")
+        print(f"Error loading {coeff_csv_path}: {e}")
         return None
 
 
@@ -92,8 +124,10 @@ def create_single_axis_graph(axis):  # single stereotype
     plt.tight_layout()
     
     # Save as PDF and SVG
-    pdf_path = f"../figs/coeffs/{axis}_coeff_scores.pdf"
-    svg_path = f"../figs/coeffs/{axis}_coeff_scores.svg"
+    pdf_path = os.path.join(OUTPUT_PATH, f"{axis}_coeff_scores.pdf")
+    svg_path = os.path.join(OUTPUT_PATH, f"{axis}_coeff_scores.svg")
+    # pdf_path = f"../figs/coeffs/{axis}_coeff_scores.pdf"
+    # svg_path = f"../figs/coeffs/{axis}_coeff_scores.svg"
     
     fig.savefig(pdf_path, bbox_inches='tight', dpi=300)
     fig.savefig(svg_path, bbox_inches='tight', dpi=300)
@@ -231,9 +265,10 @@ def create_averaged_coeff_graph():
     plt.tight_layout()
     
     # Save as PDF, SVG, and PNG
-    pdf_path = "../figs/coeffs/averaged_coeff_scores.pdf"
-    svg_path = "../figs/coeffs/averaged_coeff_scores.svg"
-    png_path = "../figs/coeffs/averaged_coeff_scores.png"
+    pdf_path = os.path.join(OUTPUT_PATH, "averaged_coeff_scores.pdf")
+    svg_path = os.path.join(OUTPUT_PATH, "averaged_coeff_scores.svg")
+    png_path = os.path.join(OUTPUT_PATH, "averaged_coeff_scores.png")
+
     
     fig.savefig(pdf_path, bbox_inches='tight', dpi=300)
     fig.savefig(svg_path, bbox_inches='tight', dpi=300)
@@ -255,8 +290,8 @@ def generate_coeff_visualizations():
     axes = choose_axes(args.axes)
 
     
-    # Create output directory
-    os.makedirs("../figs/5c-coeffs", exist_ok=True)
+    # Create output directory → already done at the beginning (
+    # os.makedirs(OUTPUT_PATH, exist_ok=True)
     
     # Create 2x4 grid for 8 axes
     fig, axes_grid = plt.subplots(2, 4, figsize=(16, 8))
@@ -278,8 +313,8 @@ def generate_coeff_visualizations():
     plt.tight_layout()
     
     # Save as PDF and SVG
-    pdf_path = "../figs/coeffs/coeff_scores_all_axes.pdf"
-    svg_path = "../figs/coeffs/coeff_scores_all_axes.svg"
+    pdf_path = f"{OUTPUT_PATH}/coeff_scores_all_axes.pdf"
+    svg_path = f"{OUTPUT_PATH}/coeff_scores_all_axes.svg"
     
     fig.savefig(pdf_path, bbox_inches='tight', dpi=300)
     fig.savefig(svg_path, bbox_inches='tight', dpi=300)
