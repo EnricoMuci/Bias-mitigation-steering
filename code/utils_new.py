@@ -60,21 +60,25 @@ def get_model_short_name(model_name, quantized=True):
         return f"{base_name}-full"
 
 
-class QuantizedSteeringModel(SteeringModel):
+class CustomSteeringModel(SteeringModel):
     def __init__(
             self,
             model_name: str,
             layer_ids: typing.Iterable[int],
-            model_path: str = None,
-            token: str = None,
-            quantization_config=None, ):
-        # Call nn.Module.__init__() directly, bypassing SteeringModel.__init__()
+            model_path: str | None = None,
+            token: str | None = None,
+            quantization_config: BitsAndBytesConfig | None = None,
+            torch_dtype: torch.dtype = torch.float16,
+    ):
+        # Directly call nn.Module.__init__() to bypass SteeringModel default loader
         torch.nn.Module.__init__(self)
+
         # self.model_name = model_name
         self.model_name = model_path if model_path is not None else model_name
         self.token = token
 
-        load_path = model_path if model_path is not None else model_name
+        # load_path = model_path if model_path is not None else model_name
+        load_path = self.model_name
 
         load_kwargs = {
             "device_map": "auto",
@@ -84,48 +88,60 @@ class QuantizedSteeringModel(SteeringModel):
         if quantization_config is not None:
             load_kwargs["quantization_config"] = quantization_config
         else:
-            load_kwargs["torch_dtype"] = torch.float16  # type: ignore
+            load_kwargs["torch_dtype"] = torch_dtype
+
+        if token is not None:
+            load_kwargs["token"] = token
 
         print(f"Loading weights from {load_path}", flush=True)
         self.model = AutoModelForCausalLM.from_pretrained(load_path, **load_kwargs)
-        print(f"Weights loading from {load_path} completed", flush=True)
+        print(f"Weights loaded successfully from {load_path}", flush=True)
 
-        if quantization_config is None:
-            self.model = self.model.to(
-                "cuda:0" if torch.cuda.is_available()
-                else "mps:0" if torch.backends.mps.is_available()
-                else "cpu"
-            )
+        # Do not call self.model.to(...) here: device_map='auto' handles GPU/CPU mapping automatically.
+        # if quantization_config is None:
+        #     self.model = self.model.to(
+        #         "cuda:0" if torch.cuda.is_available()
+        #         else "mps:0" if torch.backends.mps.is_available()
+        #         else "cpu"
+        #     )
 
         layers = model_layer_list(self.model)
         self.layer_ids = [i if i >= 0 else len(layers) + i for i in layer_ids]
 
-        # FIXME: TEMPORAL SECTION
-        print("Device map:", getattr(self.model, 'hf_device_map', 'N/A'))
+        # Debug print for verifying device placement
+        print("Device map:", getattr(self.model, "hf_device_map", "N/A"), flush=True)
         for name, param in self.model.named_parameters():
             print(f"{name}: {param.device}")
             break  # END
 
-        for layer_id in layer_ids:
+        for layer_id in self.layer_ids:
             layer = layers[layer_id]
             if not isinstance(layer, SteeringModule):
-                with torch.no_grad():  # FIXME
+                with torch.no_grad():
                     layers[layer_id] = SteeringModule(layer)
             else:
-                warnings.warn("Trying to rewrap a wrapped model! Try calling .unwrap first.")
+                warnings.warn("Attempting to rewrap an already wrapped layer! Call .unwrap first.")
 
 
-def configure_model(model_name, model_path, layer_ids=None, quantized=True):
-
+def configure_model(
+        model_name: str,
+        model_path: str,
+        layer_ids: list[int] | None = None,
+        quantized: bool = True
+) -> CustomSteeringModel:
     if layer_ids is None:
         layer_ids = [5]
+
     if not quantized:
-        print(f"Configuring {model_name}-full from {model_path}")
-        return QuantizedSteeringModel(
-            model_path=model_path, layer_ids=layer_ids,
-            model_name=model_name, quantization_config=None)
-    else:
-        print(f"Configuring {model_name}-quantized from {model_path}")
+        print(f"Configuring full-precision model {model_name} from {model_path}")
+        return CustomSteeringModel(
+            model_name=model_name,
+            model_path=model_path,
+            layer_ids=layer_ids,
+            quantization_config=None,
+        )
+
+    print(f"Configuring 4-bit quantized model {model_name} from {model_path}")
     try:
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -133,15 +149,24 @@ def configure_model(model_name, model_path, layer_ids=None, quantized=True):
             bnb_4bit_quant_type="nf4",
             bnb_4bit_use_double_quant=True,
         )
-        return QuantizedSteeringModel(
-            model_path=model_path, layer_ids=layer_ids,
-            model_name=model_name, quantization_config=bnb_config)
+        return CustomSteeringModel(
+            model_name=model_name,
+            model_path=model_path,
+            layer_ids=layer_ids,
+            quantization_config=bnb_config,
+        )
     except Exception as e:
         tqdm.write(f"[FALLBACK - NOT QUANTIZED] {model_name}: {type(e).__name__}: {e}")
         traceback.print_exc()
         if STRICT_QUANTIZATION:
             raise
-        return SteeringModel(model_path, [5])
+        # Consistent fallback returning CustomSteeringModel without quantization
+        return CustomSteeringModel(
+            model_name=model_name,
+            model_path=model_path,
+            layer_ids=layer_ids,
+            quantization_config=None,
+        )
 
 
 def set_steering_layer(model, layer_id):
