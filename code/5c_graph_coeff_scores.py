@@ -13,7 +13,7 @@ import os
 import numpy as np
 import matplotlib
 
-from utils_new import choose_axes, EXPERIMENT,  QuantizedSteeringModel, get_model_short_name, get_args
+from utils_new import choose_axes, BASE_EXPERIMENT,  get_model_short_name, get_args
 
 matplotlib.use('Agg')  # Use non-interactive backend
 
@@ -23,6 +23,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1', help='model name')
 parser.add_argument('-p', '--path', type=str, default=None, help='model path')
 parser.add_argument('-q', '--quantization', action='store_true', help='Insert flag to quantize the model')
+parser.add_argument('-e', '--experiment', type=str, default=None, help='Use it to change the experiment')
 
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='Axes to be processed')
 parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of retrieved sentences')
@@ -32,6 +33,11 @@ args = parser.parse_args()
 QUANTIZATION = args.quantization
 (model_name, model_path) = get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name, quantized=QUANTIZATION)
+
+if args.experiment is not None:
+    EXPERIMENT = args.experiment
+else:
+    EXPERIMENT = BASE_EXPERIMENT
 
 FIGS_PATH = f"../figs/{model_short_name}/{EXPERIMENT}"
 os.makedirs(FIGS_PATH, exist_ok=True)

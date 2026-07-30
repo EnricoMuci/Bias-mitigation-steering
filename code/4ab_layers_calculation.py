@@ -22,7 +22,7 @@ import tqdm
 
 from utils import load_and_tokenize_contrastive, get_output, bbq_axes
 from utils_new import (get_args, get_model_short_name, define_custom_tokenizer, configure_model,
-                       EXPERIMENT, REMOTE_DRIVE_THESIS_PROJECT, model_layer_list) # FIXME: model_layer_list importing
+                       BASE_EXPERIMENT, REMOTE_DRIVE_THESIS_PROJECT, model_layer_list) # FIXME: model_layer_list importing
 
 
 
@@ -151,7 +151,7 @@ def preview_status():
 
                 if args.colab:
                     remote_file = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/"
-                                   f"{model_short_name}-{EXPERIMENT}/{axis}_{vt}.csv")
+                                   f"{model_short_name}-{BASE_EXPERIMENT}/{axis}_{vt}.csv")
                     if os.path.exists(remote_file):
                         found_path = remote_file
                         source = "Drive"
@@ -250,7 +250,7 @@ def old_preview_status():
                 source = ""
                 if args.colab:
                     remote_file = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/"
-                                   f"{model_short_name}-{EXPERIMENT}/{axis}_{vt}.csv")
+                                   f"{model_short_name}-{BASE_EXPERIMENT}/{axis}_{vt}.csv")
                     if os.path.exists(remote_file):
                         found_path = remote_file
                         source = "Drive"
@@ -508,7 +508,7 @@ def get_acc_change_per_layer():
         for vector_type in set_types:  # ["train", "train+prompt"]:
             output_file = f"{LAYERS_PATH}/{axis}_{vector_type}.csv"
 
-            remote_file = f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/{model_short_name}-{EXPERIMENT}/{axis}_{vector_type}.csv"
+            remote_file = f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/{model_short_name}-{BASE_EXPERIMENT}/{axis}_{vector_type}.csv"
             # start_layer = 1
             results = []
 

@@ -14,7 +14,7 @@ from dialz.vector import SteeringModule
 from utils import bbq_axes
 from utils import get_output
 from utils_new import (get_args, get_model_short_name, define_custom_tokenizer, configure_model,
-                       model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, CROWS_AXIS_MAP, EXPERIMENT, SEED,
+                       model_layer_list, REMOTE_DRIVE_THESIS_PROJECT, CROWS_AXIS_MAP, BASE_EXPERIMENT, SEED,
                        CROWS_PATH)
 
 
@@ -32,6 +32,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1', help='model name')
 parser.add_argument('-p', '--path', type=str, default=None, help='model path')
 parser.add_argument('-q', '--quantization', action='store_true', help='Insert flag to quantize the model')
+parser.add_argument('-e', '--experiment', type=str, default=None, help='Use it to change the experiment')
 
 parser.add_argument('-c', '--colab', action='store_true', help='Flag about remote saving')
 parser.add_argument('-o', '--only-preview', action='store_true', help='Show only the preview')
@@ -60,6 +61,11 @@ if args.axes is not None:
     required_axes = args.axes
 else:
     required_axes = bbq_axes
+
+if args.experiment is not None:
+    EXPERIMENT = args.experiment
+else:
+    EXPERIMENT = BASE_EXPERIMENT
 
 # Injection parameters
 k = args.k_sentences  # top-k sentences

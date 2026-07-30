@@ -118,7 +118,7 @@ def preview_status():
                 source = ""
                 if args.colab:
                     remote_file = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/"
-                                   f"{model_short_name}-{EXPERIMENT}/{axis}_{vt}.csv")
+                                   f"{model_short_name}-{BASE_EXPERIMENT}/{axis}_{vt}.csv")
                     if os.path.exists(remote_file):
                         found_path = remote_file
                         source = "Drive"
@@ -375,7 +375,7 @@ def get_acc_change_per_layer():
         # for each of our vectors
         for vector_type in set_types:  # ["train", "train+prompt"]:
             output_file = f"../data/layer_scores/{model_short_name}/{axis}_{vector_type}.csv"
-            remote_file = f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/{model_short_name}-{EXPERIMENT}/{axis}_{vector_type}.csv"
+            remote_file = f"{REMOTE_DRIVE_THESIS_PROJECT}/data/layer_scores/{model_short_name}-{BASE_EXPERIMENT}/{axis}_{vector_type}.csv"
             start_layer = 1
             results = []
 
