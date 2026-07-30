@@ -8,17 +8,23 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 import shutil
+from transformers import AutoConfig
+from dialz.vector import SteeringModule
 
 from dialz import SteeringVector, SteeringModel
 from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
 
+import os
+import torch
+import tqdm
+
 from utils import load_and_tokenize_contrastive, get_output, bbq_axes
 from utils_new import (get_args, get_model_short_name, define_custom_tokenizer, configure_model,
                        EXPERIMENT, REMOTE_DRIVE_THESIS_PROJECT, model_layer_list) # FIXME: model_layer_list importing
 
-from transformers import AutoConfig
+
 
 import warnings
 # ✓ ✗ … ○
@@ -38,7 +44,7 @@ parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Inst
 parser.add_argument('-p', '--path', type=str, default=None, help='model path')
 parser.add_argument('-q', '--quantization', action='store_true', help='Insert flag to quantize the model')
 
-parser.add_argument('-t', '--type', type=int, default=2, help='train[+prompt] → get_acc_change_per_layer')
+parser.add_argument('-t', '--type', type=int, default=2, help='train[+prompt] → in get_acc_change_per_layer')
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
 parser.add_argument('-m', '--mode', nargs='*', type=str, default=None, help="['layer', 'separability', 'best']")
 
