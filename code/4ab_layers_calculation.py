@@ -39,6 +39,8 @@ import zoneinfo
 
 tz_set = zoneinfo.ZoneInfo("Europe/Rome") # FIXME : Remove
 
+ALL_OPERATIONS = ['layer', 'separability', 'best']
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1', help='model name')
 parser.add_argument('-p', '--path', type=str, default=None, help='model path')
@@ -46,13 +48,16 @@ parser.add_argument('-q', '--quantization', action='store_true', help='Insert fl
 
 parser.add_argument('-t', '--type', type=int, default=2, help='train[+prompt] → in get_acc_change_per_layer')
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
-parser.add_argument('-m', '--mode', nargs='*', type=str, default=[], help="['layer', 'separability', 'best']")
+parser.add_argument('-m', '--mode', nargs='*', type=str, default=None, help=f"{ALL_OPERATIONS}")
 
 parser.add_argument('-c', '--colab', action='store_true', help='executing on Colab')
 parser.add_argument('-o', '--only-preview', action='store_true', help='only preview')
 args = parser.parse_args()
 
-OPERATIONS = args.mode
+if args.mode is None:
+    OPERATIONS = ALL_OPERATIONS.copy()
+else:
+    OPERATIONS = args.mode
 
 if args.axes is not None:
     chosen_axes = args.axes.copy()  # list type
@@ -566,7 +571,7 @@ def get_acc_change_per_layer():
                     # END NEW Wrapping
 
                     start_time = datetime.datetime.now(tz=tz_set)
-                    print(f"\n\n=== layer = {layer} @ {start_time} ===")
+                    print(f"\n=== layer = {layer} | axis = {axis} | type = {vector_type} ===")
 
                     # apply the predictor to every row
                     bbq_df[['ans', 'prediction', 'correct']] = bbq_df.apply(
