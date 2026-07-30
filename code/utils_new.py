@@ -70,7 +70,8 @@ class QuantizedSteeringModel(SteeringModel):
             quantization_config=None, ):
         # Call nn.Module.__init__() directly, bypassing SteeringModel.__init__()
         torch.nn.Module.__init__(self)
-        self.model_name = model_name
+        # self.model_name = model_name
+        self.model_name = model_path if model_path is not None else model_name
         self.token = token
 
         load_path = model_path if model_path is not None else model_name
