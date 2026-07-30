@@ -174,6 +174,7 @@ def preview_status():  # NEW
     """Print a preview of the current status"""
     print("\n" + "=" * 55)
     print(f"PRE-RUN STATUS CHECK [K = {k}] - [B = {b}]")
+    print(f"\nWorking in {COEFF_SCORES_DIR}")
     print("=" * 55)
 
     all_done = True
