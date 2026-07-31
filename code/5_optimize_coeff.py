@@ -398,8 +398,8 @@ def get_best_coeffs(mmlu_df=None):
                 # injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k-{k}_b-{b}.csv"
 
                 if k > 0: # only with injections
-                    os.makedirs(f"../cache-{EXPERIMENT}/5a_k-{k}_b-{b}/", exist_ok=True)
-                    injected_cache = f"../cache-{EXPERIMENT}/5a_k-{k}_b-{b}/{axis}_inj_k-{k}_b-{b}.csv"
+                    os.makedirs(f"../cache/{EXPERIMENT}/5a_k-{k}_b-{b}/", exist_ok=True)
+                    injected_cache = f"../cache/{EXPERIMENT}/5a_k-{k}_b-{b}/{axis}_inj_k-{k}_b-{b}.csv"
 
                     if os.path.exists(injected_cache):
                         validation_df = pd.read_csv(injected_cache)
