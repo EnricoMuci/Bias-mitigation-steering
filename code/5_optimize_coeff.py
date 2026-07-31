@@ -201,10 +201,10 @@ def preview_status():  # NEW
         for _, row in best_layers.iterrows():
             axis = row['axis']
             vt = row['vt']
-            if k > 0:
-                coeff_csv_name = f"{axis}_{vt}_k-{k}_b-{b}.csv"  # injections
-            else:
-                coeff_csv_name = f"{axis}_{vt}.csv" # no injections
+            if k > 0:  # injections
+                coeff_csv_name = f"{axis}_{vt}_k-{k}_b-{b}.csv"
+            else:  # no injections
+                coeff_csv_name = f"{axis}_{vt}.csv"
             layer = row['max_layer']
 
             found_path = None
@@ -367,7 +367,7 @@ def get_best_coeffs(mmlu_df=None):
 
     for top_vt in TOP_VECTOR_TYPES:  # 'top_train' 'top_train+prompt'
         top_best_vt_file = f"{BEST_LAYERS_DIR}/{top_vt}.csv"
-        vt_dir = top_vt.removeprefix("top_")
+        # vt_dir = top_vt.removeprefix("top_")
 
         if not os.path.exists(top_best_vt_file):
             # In best_layers there should be only
@@ -397,17 +397,19 @@ def get_best_coeffs(mmlu_df=None):
 
                 # injected_cache = f"{LOCAL_BBQ_VALIDATE_DIR}/{axis}_injected_k-{k}_b-{b}.csv"
 
-                os.makedirs(f"../cache-{EXPERIMENT}/cache_k-{k}_b-{b}/", exist_ok=True)
-                injected_cache = f"../cache-{EXPERIMENT}/cache_k-{k}_b-{b}/{axis}_injected_k-{k}_b-{b}.csv"
+                if k > 0: # only with injections
+                    os.makedirs(f"../cache-{EXPERIMENT}/5a_k-{k}_b-{b}/", exist_ok=True)
+                    injected_cache = f"../cache-{EXPERIMENT}/5a_k-{k}_b-{b}/{axis}_inj_k-{k}_b-{b}.csv"
 
-                if os.path.exists(injected_cache):
-                    validation_df = pd.read_csv(injected_cache)
-                else:
-                    validation_df = inject_crows_bias_to_df(
-                        validation_df, crows_df, axis,
-                        num_sentences=k, bias_ratio=b
-                    )
-                    validation_df.to_csv(injected_cache, index=False)
+                    if os.path.exists(injected_cache):
+                        validation_df = pd.read_csv(injected_cache)
+                    else:
+                        validation_df = inject_crows_bias_to_df(
+                            validation_df, crows_df, axis,
+                            num_sentences=k, bias_ratio=b
+                        )
+                        validation_df.to_csv(injected_cache, index=False)
+                # end IF
 
                 print(f"Running co-effs for {axis} on vector {vt} at {datetime.datetime.now()}")
                 vector = SteeringVector.import_gguf(f'../vectors/{model_short_name}/{vt}/{axis}.gguf')
@@ -416,16 +418,19 @@ def get_best_coeffs(mmlu_df=None):
                       f"Error: {e}")
                 continue
 
-            # Save paths
-            csv_name = f"{axis}_{vt}_k-{k}_b-{b}.csv"
+            # Saving paths
+            if k > 0: # with injections
+                csv_name = f"{axis}_{vt}_k-{k}_b-{b}.csv"
+            else: # no injections
+                csv_name = f"{axis}_{vt}.csv"
 
-            local_dir_path = f"{COEFF_SCORES_DIR}/{vt_dir}"  # 'train/' or 'train+prompt/'
+            local_dir_path = f"{COEFF_SCORES_DIR}/{vt}"  # 'train/' or 'train+prompt/'
             os.makedirs(local_dir_path, exist_ok=True)
             local_file_path = os.path.join(local_dir_path, csv_name)
 
             if args.colab:  # In Colab, it creates the remote vt path to manage session aborts
                 remote_dir_path = (f"{REMOTE_DRIVE_THESIS_PROJECT}/data/coeff_scores/"
-                                   f"{model_short_name}-{EXPERIMENT}/k-{k}_b-{b}/{vt_dir}")
+                                   f"{model_short_name}-{EXPERIMENT}/k-{k}_b-{b}/{vt}")
                 os.makedirs(remote_dir_path, exist_ok=True)
                 remote_file_path = os.path.join(remote_dir_path, csv_name)
             else:  # No Google Drive
