@@ -181,6 +181,8 @@ def preview_status():  # NEW
     print("\n" + "=" * 55)
     print(f"PRE-RUN STATUS CHECK [K = {k}] - [B = {b}]")
     print(f"\nWorking in {COEFF_SCORES_DIR}")
+    if k > 0 and EXPERIMENT in ['reproduction', 'original']:
+        print(f"[ERROR] Experiment set to '{EXPERIMENT} with k = {k} > 0!")
     print("=" * 55)
 
     all_done = True
