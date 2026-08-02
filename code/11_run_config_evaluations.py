@@ -9,8 +9,8 @@ from tqdm import tqdm
 import torch
 from dialz import SteeringVector
 
-from utils_new import get_args, get_model_short_name, define_custom_tokenizer, configure_model, \
-    set_steering_layer
+from utils_new import (get_args, get_model_short_name, define_custom_tokenizer, configure_model, set_steering_layer,
+                       BASE_EXPERIMENT)
 
 # Import functions from the individual evaluation files
 # Note: Using importlib because Python module names can't start with numbers
@@ -80,9 +80,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
 parser.add_argument('-p', '--path', type=str, default=None)  # model path
 parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
-parser.add_argument('-e', '--evals', nargs='*', choices=list(EVAL_REGISTRY.keys()),
-                    default=list(EVAL_REGISTRY.keys()),
-                    help='Which evaluations to run (default: all). E.g. --evals bbq mmlu')
+parser.add_argument('-d', '--datasets', nargs='*', choices=list(EVAL_REGISTRY.keys()),
+                    default= ['bbq', 'mmlu'], #list(EVAL_REGISTRY.keys()),
+                    help='Which datasets to run (default: BBQ and MMLU). E.g. --evals bbq mmlu')
 parser.add_argument('--config', type=str, default=None,
                     help='Path to a single config CSV to evaluate. Default: every *.csv in ../data/configs/')
 args = parser.parse_args()
@@ -91,6 +91,10 @@ args = parser.parse_args()
 model_short_name = get_model_short_name(model_name)
 
 tokenizer = define_custom_tokenizer(model_name, model_path)
+
+EXPERIMENT = BASE_EXPERIMENT # FIXME
+CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}"
+RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}"
 
 
 def _eval_already_done(existing_df, axis, eval_key):
@@ -121,8 +125,8 @@ def run_evaluations_for_config(config_file, model):
     config_df = pd.read_csv(config_file)
     print(f"Loaded {len(config_df)} configurations")
 
-    os.makedirs(f"../results/{model_short_name}", exist_ok=True)
-    results_file = f"../results/{model_short_name}/{config_name}.csv"
+    os.makedirs(RESULTS_PATH , exist_ok=True)
+    results_file = f"{RESULTS_PATH}/{config_name}.csv"
 
     existing_df = None
     if os.path.exists(results_file):
@@ -157,7 +161,7 @@ def run_evaluations_for_config(config_file, model):
 
     for _, config_row in tqdm(config_df.iterrows(), total=len(config_df), desc="Total Configs Progress", position=0):
         axis = config_row['axis']
-        vector_type = config_row['vector_type']
+        vector_type = config_row['vector_type'] # 'train' 'train+prompt'
         layer = int(config_row['layer'])
         coeff = config_row['coeff']
         bbq_accuracy = config_row['bbq_accuracy']
@@ -238,7 +242,7 @@ def setup_logging():
     """Set up logging to redirect all output to a log file."""
     # Create timestamp for unique log file name
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = f"../logs/evaluation_run_{timestamp}.log"
+    log_file = f"../eval-logs/evaluation_run_{timestamp}.log"
 
     # Set up logging configuration
     logging.basicConfig(
@@ -283,9 +287,9 @@ def main():
         if not os.path.exists(config_files[0]):
             raise FileNotFoundError(f"Config file not found: {config_files[0]}")
     else:
-        config_files = sorted(glob.glob("../data/configs/*.csv"))
+        config_files = sorted(glob.glob(f"{CONFIG_PATH}/*.csv"))
         if not config_files:
-            raise FileNotFoundError("No config files found in ../data/configs/")
+            raise FileNotFoundError(f"No config files found in {CONFIG_PATH}")
 
     print(f"Config files to process: {config_files}")
 
