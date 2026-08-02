@@ -355,8 +355,14 @@ def predict_row(row, model, vector, coeff, task):
     })
 
 
-def save_results(results_df, local_file_path, remote_file_path):
+def save_results(results_df, local_file_path, remote_file_path, sort_key:str = 'coeff'):
     """Save results to local path, and to Drive if on Colab."""
+    if sort_key is not None:
+        if sort_key not in results_df.columns:
+            print(f"Error: missing '{sort_key}' in results_df {results_df.columns}")
+        else:
+            results_df = results_df.sort_values(by='coeff').reset_index(drop=True)
+
     results_df.to_csv(local_file_path, index=False)
     if args.colab:
         results_df.to_csv(remote_file_path, index=False)
@@ -399,7 +405,7 @@ def get_best_coeffs(mmlu_df=None):
 
                 if k > 0: # only with injections
                     os.makedirs(f"../cache/{EXPERIMENT}/5a_k-{k}_b-{b}/", exist_ok=True)
-                    injected_cache = f"../cache/{EXPERIMENT}/5a_k-{k}_b-{b}/{axis}_inj_k-{k}_b-{b}.csv"
+                    injected_cache = f"../cache/{EXPERIMENT}/5a_k-{k}_b-{b}/{axis}_injected_k-{k}_b-{b}.csv"
 
                     if os.path.exists(injected_cache):
                         validation_df = pd.read_csv(injected_cache)
