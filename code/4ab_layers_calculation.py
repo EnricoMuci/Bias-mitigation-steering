@@ -210,7 +210,7 @@ def preview_status():
                     "Vector": vt,
                     "Status": status,
                     "Progress": progress,
-                    "Best Layer": best_layer_val,
+                    "Best": best_layer_val,
                     "Source": source
                 })
 
