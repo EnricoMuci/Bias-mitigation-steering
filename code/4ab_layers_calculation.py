@@ -101,10 +101,10 @@ def preview_status():
         print("=" * 70)
 
         sep_data = []
-        for axis in chosen_axes:
-            if axis not in bbq_axes:
-                continue
-            for vt in ["train", "train+prompt"]:
+        for vt in ["train", "train+prompt"]:
+            for axis in chosen_axes:
+                if axis not in bbq_axes:
+                    continue
                 csv_path = f"{SEPARABILITY_PATH}/{axis}_{vt}.csv"
                 png_path = f"{FIGS_PATH}/{axis}_bbq_{vt}.png"
                 csv_ok = os.path.exists(csv_path)
@@ -126,8 +126,8 @@ def preview_status():
                     details = "-"
 
                 sep_data.append({
-                    "Axis": axis,
                     "Vector": vt,
+                    "Axis": axis,
                     "Status": status,
                     "Details": details
                 })
@@ -206,12 +206,12 @@ def preview_status():
                     best_layer_val = "X"
 
                 layer_data.append({
-                    "Axis": axis,
                     "Vector": vt,
+                    "Axis": axis,
                     "Status": status,
                     "Progress": progress,
+                    "Source": source,
                     "Best": best_layer_val,
-                    "Source": source
                 })
 
         if layer_data:
