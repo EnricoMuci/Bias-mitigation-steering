@@ -256,6 +256,7 @@ def setup_logging():
     """Set up logging to redirect all output to a log file."""
     # Create timestamp for unique log file name
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    os.makedirs(f"{RESULTS_PATH}/eval-logs", exist_ok=True)
     log_file = f"{RESULTS_PATH}/eval-logs/evaluation_run_{timestamp}.log"
 
     # Set up logging configuration
