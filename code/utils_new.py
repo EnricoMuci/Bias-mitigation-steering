@@ -45,7 +45,7 @@ def choose_axes(axes: list | None = None) -> list:
         return utils.bbq_axes
 
 
-def get_model_short_name(model_name, quantized=True):
+def get_model_short_name(model_name, quantized:bool=True):
     model_short_names = {
         "Qwen/Qwen2.5-7B-Instruct": "qwen",
         "meta-llama/Llama-3.1-8B-Instruct": "llama",

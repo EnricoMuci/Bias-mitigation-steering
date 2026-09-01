@@ -48,6 +48,7 @@ def set_dir_paths():
         print(f'Coefficient scores in: {coeff_base_path} [K = 0]')
         print(f'Configurations in: {config_base_path} [K = 0]')
         return coeff_base_path, config_base_path
+
     else: # error
         print(f'Error! Please check:\nExperiment = {EXPERIMENT}\nK = {k}\nB = {b}\n'
               f'Fallback on {coeff_base_path} and {config_base_path} but, please, check!')
