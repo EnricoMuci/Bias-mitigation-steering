@@ -77,25 +77,39 @@ USE_SELF_DEBIAS = True  # Set to True to enable self-debiasing
 
 # ARGUMENTS
 parser = argparse.ArgumentParser()
-parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1')  # model name
-parser.add_argument('-p', '--path', type=str, default=None)  # model path
-parser.add_argument('-c', '--colab', action='store_true')  # flag about remote saving
+
+parser.add_argument('-n', '--name', type=str, default='mistralai/Mistral-7B-Instruct-v0.1', help='model name')
+parser.add_argument('-p', '--path', type=str, default=None, help='model path')
+parser.add_argument('-q', '--quantization', action='store_true', help='Insert flag to quantize the model')
+parser.add_argument('-e', '--experiment', type=str, default=None, help='Use it to change the experiment')
+
+parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of retrieved sentences')
+parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
+
 parser.add_argument('-d', '--datasets', nargs='*', choices=list(EVAL_REGISTRY.keys()),
                     default= ['bbq', 'mmlu'], #list(EVAL_REGISTRY.keys()),
                     help='Which datasets to run (default: BBQ and MMLU). E.g. --evals bbq mmlu')
-parser.add_argument('--config', type=str, default=None,
+
+parser.add_argument('-c', '--config', type=str, default=None,
                     help='Path to a single config CSV to evaluate. Default: every *.csv in ../data/configs/')
+
 args = parser.parse_args()
 
 (model_name, model_path) = get_args([args.name, args.path])
-model_short_name = get_model_short_name(model_name)
-
+model_short_name = get_model_short_name(model_name, quantized=args.quantization)
 tokenizer = define_custom_tokenizer(model_name, model_path)
 
-EXPERIMENT = BASE_EXPERIMENT # FIXME
+if args.experiment is not None:
+    EXPERIMENT = args.experiment
+else:
+    EXPERIMENT = BASE_EXPERIMENT
+
 CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}"
 RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}"
 
+# Injection parameters
+k = args.k_sentences  # top-k sentences
+b = args.bias_ratio  # fraction of pro-stereotyped sentences
 
 def _eval_already_done(existing_df, axis, eval_key):
     """Check whether a specific evaluation already has a saved result for
@@ -242,7 +256,7 @@ def setup_logging():
     """Set up logging to redirect all output to a log file."""
     # Create timestamp for unique log file name
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_file = f"../eval-logs/evaluation_run_{timestamp}.log"
+    log_file = f"{RESULTS_PATH}/eval-logs/evaluation_run_{timestamp}.log"
 
     # Set up logging configuration
     logging.basicConfig(
