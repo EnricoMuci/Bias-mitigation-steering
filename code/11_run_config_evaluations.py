@@ -22,7 +22,7 @@ import glob
 # prefix used when writing results. Modules are imported lazily (only the
 # ones actually selected via --evals) so unused evaluations don't pay their
 # import cost / dependency requirements.
-EVAL_REGISTRY = {
+DATASETS_REGISTRY = {
     'bbq': {
         'module_name': '6_bbq_evaluation',
         'func_attr': 'run_bbq_evaluation',
@@ -67,7 +67,7 @@ _loaded_modules = {}
 def get_eval_module(eval_key):
     """Lazily import an evaluation module the first time it's needed."""
     if eval_key not in _loaded_modules:
-        _loaded_modules[eval_key] = import_module(EVAL_REGISTRY[eval_key]['module_name'])
+        _loaded_modules[eval_key] = import_module(DATASETS_REGISTRY[eval_key]['module_name'])
     return _loaded_modules[eval_key]
 
 
@@ -86,12 +86,12 @@ parser.add_argument('-e', '--experiment', type=str, default=None, help='Use it t
 parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of retrieved sentences')
 parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
 
-parser.add_argument('-d', '--datasets', nargs='*', choices=list(EVAL_REGISTRY.keys()),
-                    default= ['bbq', 'mmlu'], #list(EVAL_REGISTRY.keys()),
+parser.add_argument('-d', '--datasets', nargs='*', choices=list(DATASETS_REGISTRY.keys()),
+                    default= ['bbq', 'mmlu'],  #list(EVAL_REGISTRY.keys()),
                     help='Which datasets to run (default: BBQ and MMLU). E.g. --evals bbq mmlu')
 
 parser.add_argument('-c', '--config', type=str, default=None,
-                    help='Path to a single config CSV to evaluate. Default: every *.csv in ../data/configs/')
+                    help='Path to a single config CSV to evaluate. Default: every *.csv in ../data/configs/[...]')
 
 args = parser.parse_args()
 
@@ -118,7 +118,7 @@ def _eval_already_done(existing_df, axis, eval_key):
     if existing_df is None or axis not in existing_df.index:
         return False
     row = existing_df.loc[axis]
-    prefix = EVAL_REGISTRY[eval_key]['prefix']
+    prefix = DATASETS_REGISTRY[eval_key]['prefix']
     matching_cols = [c for c in existing_df.columns if c.startswith(f"{prefix}_")]
     if not matching_cols:
         return False
@@ -171,7 +171,7 @@ def run_evaluations_for_config(config_file, model):
             existing_df = pd.concat([existing_df, new_row_df])
         existing_df.reset_index(drop=True).to_csv(results_file, index=False)
 
-    requested_evals = [e for e in EVAL_REGISTRY if e in args.evals]
+    requested_datasets = [ds for ds in DATASETS_REGISTRY if ds in args.datasets]
 
     for _, config_row in tqdm(config_df.iterrows(), total=len(config_df), desc="Total Configs Progress", position=0):
         axis = config_row['axis']
@@ -181,7 +181,7 @@ def run_evaluations_for_config(config_file, model):
         bbq_accuracy = config_row['bbq_accuracy']
         mmlu_accuracy = config_row['mmlu_accuracy']
 
-        pending_evals = [e for e in requested_evals if not _eval_already_done(existing_df, axis, e)]
+        pending_evals = [e for e in requested_datasets if not _eval_already_done(existing_df, axis, e)]
         if not pending_evals:
             print(f"\n  Skipping {axis}: all requested evaluations already completed (resumed).")
             continue
@@ -213,7 +213,7 @@ def run_evaluations_for_config(config_file, model):
 
         # Run every pending evaluation (already-completed ones were filtered out above)
         for eval_key in pending_evals:
-            eval_info = EVAL_REGISTRY[eval_key]
+            eval_info = DATASETS_REGISTRY[eval_key]
             relevant_axes = eval_info['relevant_axes']  # None = all axes
 
             if relevant_axes is not None and axis not in relevant_axes:
@@ -248,7 +248,7 @@ def run_evaluations_for_config(config_file, model):
             torch.cuda.empty_cache()
 
     print(f"\nAll evaluations complete for config: {config_name}")
-    print(f"Evaluations run: {requested_evals}")
+    print(f"Evaluations run: {requested_datasets}")
     print(f"Results saved to {results_file}")
 
 
@@ -294,7 +294,7 @@ def main():
     print(f"Logging to: {log_file}")
     print(f"Fairness prompting enabled: {USE_FAIRNESS_PROMPT}")
     print(f"Self-debiasing enabled: {USE_SELF_DEBIAS}")
-    print(f"Evaluations selected: {args.evals}")
+    print(f"Evaluations selected: {args.datasets}")
 
     if args.config:
         config_files = [args.config]
