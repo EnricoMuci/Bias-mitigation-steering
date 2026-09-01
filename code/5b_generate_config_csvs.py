@@ -204,7 +204,7 @@ def generate_baseline_csv():
     if config_data:
         os.makedirs(f'../{CONFIG_DIR}', exist_ok=True)
         config_df = pd.DataFrame(config_data)
-        config_file = f"../{CONFIG_DIR}/config_baselines.csv"
+        config_file = f"{CONFIG_DIR}/config_baselines.csv"
         config_df.to_csv(config_file, index=False)
         print(f"  Saved {len(config_data)} baseline configs to {config_file}")
     else:
