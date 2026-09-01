@@ -36,6 +36,7 @@ b = args.bias_ratio  # fraction of pro-stereotyped sentences
 def set_dir_paths():
     coeff_base_path = f'../data/coeff_scores/{model_short_name}/{EXPERIMENT}'
     config_base_path = f'../data/configs/{model_short_name}/{EXPERIMENT}'
+
     if k > 0 and EXPERIMENT not in ['reproduction', 'original']: # injections
         coeff_scores_dir = os.path.join(coeff_base_path, f"k-{k}_b-{b}") # add path
         print(f'Coefficient scores in: {coeff_scores_dir} [K = {k} | B = {b}]')
@@ -83,7 +84,7 @@ def generate_config_csvs():
             print(f'Processing axis: {axis}')
             # Load the corresponding best layers file
 
-            best_layers_file = f"../data/layer_scores/{model_short_name}/best_layers/{vt_dir}.csv"
+            best_layers_file = f"../data/layer_scores/{model_short_name}/best_layers/top_{vt_dir}.csv"
             if os.path.exists(best_layers_file):
                 best_layers_df = pd.read_csv(best_layers_file)
                 # Find the row for this axis
@@ -98,7 +99,7 @@ def generate_config_csvs():
                 layer = None
                 vector_type = None
 
-            # Find CSV files for this axis in this folder
+            # Find CSV files (with coefficients scores) for this axis in this folder
             coeff_csv = f"{COMPLETE_COEFF_DIR}/{vt_dir}/{axis}_*.csv"
 
             csv_files = glob.glob(coeff_csv)
@@ -125,7 +126,7 @@ def generate_config_csvs():
         # Save config CSV for this folder
         if config_data:
             config_df = pd.DataFrame(config_data)
-            config_file = f"../data/configs/{vt_dir}.csv"
+            config_file = f"{CONFIG_DIR}/config_{vt_dir}.csv"
             config_df.to_csv(config_file, index=False)
             print(f"  Saved {len(config_data)} configs to {config_file}")
         else:
@@ -141,7 +142,8 @@ def generate_baseline_csv():
     for every axis. This is arbitrary (coeff=0 nullifies the steering
     vector's effect entirely), but we mirror it here for reproducibility.
     """
-    BASELINE_TOP_VT = "top_train+prompt"
+    BASELINE_VT = "train+prompt" # coeff-scores/
+    BASELINE_TOP_VT = f"top_{BASELINE_VT}"  # best-layers/
 
     if args.axes is not None:
         axes = args.axes.copy()
@@ -168,7 +170,7 @@ def generate_baseline_csv():
         layer = axis_row.iloc[0]['max_layer']
         vector_type = axis_row.iloc[0]['vt']  # should be 'train+prompt'
 
-        coeff_csv_pattern = f"{COMPLETE_COEFF_DIR}/{BASELINE_TOP_VT}/{axis}_*.csv"
+        coeff_csv_pattern = f"{COMPLETE_COEFF_DIR}/{BASELINE_VT}/{axis}_*.csv"
         csv_files = glob.glob(coeff_csv_pattern)
 
         if not csv_files:
@@ -202,7 +204,7 @@ def generate_baseline_csv():
     if config_data:
         os.makedirs(f'../{CONFIG_DIR}', exist_ok=True)
         config_df = pd.DataFrame(config_data)
-        config_file = f"../{CONFIG_DIR}/baselines.csv"
+        config_file = f"../{CONFIG_DIR}/config_baselines.csv"
         config_df.to_csv(config_file, index=False)
         print(f"  Saved {len(config_data)} baseline configs to {config_file}")
     else:
