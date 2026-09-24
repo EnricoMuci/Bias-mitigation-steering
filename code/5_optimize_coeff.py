@@ -62,6 +62,9 @@ if args.axes is not None:
 else:
     required_axes = bbq_axes
 
+
+
+
 if args.experiment is not None:
     EXPERIMENT = args.experiment
 else:
@@ -203,6 +206,10 @@ def preview_status():  # NEW
         for _, row in best_layers.iterrows():
             axis = row['axis']
             vt = row['vt']
+
+            if axis not in required_axes:
+                continue
+
             if k > 0:  # injections
                 coeff_csv_name = f"{axis}_{vt}_k-{k}_b-{b}.csv"
             else:  # no injections
