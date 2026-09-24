@@ -664,13 +664,14 @@ def get_acc_change_per_layer():
                     continue
 
 
-def find_best_layers():
-
+def find_best_layers(first_layer: int = 5):
+    """
+    """
     results_train = []
     results_train_prompt = []
 
     for axis in chosen_axes:
-        for vt in VECTOR_TYPES: # train and train+prompt
+        for vt in VECTOR_TYPES:  # train and train+prompt
             layer_csv = f"{LAYERS_PATH}/{axis}_{vt}.csv"
 
             if not os.path.exists(layer_csv):
@@ -679,6 +680,10 @@ def find_best_layers():
 
             acc_df = pd.read_csv(layer_csv)
 
+            acc_df = acc_df[acc_df['layer'] > first_layer]
+            if acc_df.empty:
+                print(f"[WARNING] No valid layers > {first_layer} found for {axis} ({vt})")
+                continue
 
             max_acc = acc_df['bbq_accuracy'].max()
             max_layer = acc_df.loc[acc_df['bbq_accuracy'].idxmax(), 'layer']
