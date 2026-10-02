@@ -30,22 +30,22 @@ else:
 
 # Injection parameters
 k = args.k_sentences  # top-k sentences
-b = args.bias_ratio  # fraction of pro-stereotyped sentences
+b = args.bias_ratio  # ration of pro-stereotyped sentences
 
 
 def set_dir_paths():
     coeff_base_path = f'../data/coeff_scores/{model_short_name}/{EXPERIMENT}'
     config_base_path = f'../data/configs/{model_short_name}/{EXPERIMENT}'
 
-    if k > 0 and EXPERIMENT not in ['reproduction', 'original']: # injections
-        coeff_scores_dir = os.path.join(coeff_base_path, f"k-{k}_b-{b}") # add path
+    if k > 0 and EXPERIMENT not in ['reproduction', 'original']:  # injections
+        coeff_scores_dir = os.path.join(coeff_base_path, f"k-{k}_b-{b}")  # add path
         print(f'Coefficient scores in: {coeff_scores_dir} [K = {k} | B = {b}]')
 
         config_dir_path = os.path.join(config_base_path, f"k-{k}_b-{b}")  # add path
         print(f'Configurations in: {config_dir_path} [K = {k} | B = {b}]')
         return coeff_scores_dir, config_dir_path
 
-    elif k <= 0 and EXPERIMENT in ['reproduction', 'original']: # no injections
+    elif k <= 0 and EXPERIMENT in ['reproduction', 'original']:  # no injections
         print(f'Coefficient scores in: {coeff_base_path} [K = 0]')
         print(f'Configurations in: {config_base_path} [K = 0]')
         return coeff_base_path, config_base_path
@@ -56,6 +56,7 @@ def set_dir_paths():
         return coeff_base_path, config_base_path
 
 COMPLETE_COEFF_DIR, CONFIG_DIR = set_dir_paths()
+
 
 def generate_config_csvs():
     """Generate config CSV files for each folder with best results per axis."""
