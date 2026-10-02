@@ -114,13 +114,14 @@ RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}"
 k = args.k_sentences  # top-k sentences
 b = args.bias_ratio  # fraction of pro-stereotyped sentences
 
-def _eval_already_done(existing_df, axis, eval_key):
+
+def _eval_already_done(existing_df, axis, vector_type, eval_key):
     """Check whether a specific evaluation already has a saved result for
     this axis (used to resume after an interruption without recomputing
     evaluations that already succeeded)."""
-    if existing_df is None or axis not in existing_df.index:
+    if existing_df is None or (axis, vector_type) not in existing_df.index:
         return False
-    row = existing_df.loc[axis]
+    row = existing_df.loc[(axis, vector_type)]
     prefix = DATASETS_REGISTRY[eval_key]['prefix']
     matching_cols = [c for c in existing_df.columns if c.startswith(f"{prefix}_")]
     if not matching_cols:
@@ -147,7 +148,7 @@ def run_evaluations_for_config(config_file, model):
 
     existing_df = None
     if os.path.exists(results_file):
-        existing_df = pd.read_csv(results_file).set_index('axis', drop=False)
+        existing_df = pd.read_csv(results_file).set_index(['axis','vector_type'], drop=False)
         print(f"Found existing results file ({len(existing_df)} rows) — resuming, "
               f"already-completed evaluations will be skipped.")
 
@@ -165,12 +166,12 @@ def run_evaluations_for_config(config_file, model):
         nonlocal existing_df
         axis_value = row['axis']
         if existing_df is None:
-            existing_df = pd.DataFrame([row]).set_index('axis', drop=False)
+            existing_df = pd.DataFrame([row]).set_index(['axis','vector_type'], drop=False)
         elif axis_value in existing_df.index:
             for key, value in row.items():
                 existing_df.loc[axis_value, key] = value
         else:
-            new_row_df = pd.DataFrame([row]).set_index('axis', drop=False)
+            new_row_df = pd.DataFrame([row]).set_index(['axis','vector_type'], drop=False)
             existing_df = pd.concat([existing_df, new_row_df])
         existing_df.reset_index(drop=True).to_csv(results_file, index=False)
 
@@ -190,12 +191,12 @@ def run_evaluations_for_config(config_file, model):
         bbq_accuracy = config_row['bbq_accuracy']
         mmlu_accuracy = config_row['mmlu_accuracy']
 
-        pending_evals = [e for e in requested_datasets if not _eval_already_done(existing_df, axis, e)]
+        pending_evals = [e for e in requested_datasets if not _eval_already_done(existing_df, axis, vector_type, e)]
         if not pending_evals:
             print(f"\n  Skipping {axis}: all requested evaluations already completed (resumed).")
             continue
 
-        print(f"\n  Processing {axis} (layer={layer}, coeff={coeff})... pending: {pending_evals}")
+        print(f"\n  Processing {axis} - {vector_type} (layer={layer}, coeff={coeff})... pending: {pending_evals}")
 
         # Check if vector file exists before proceeding
         vector_path = f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf'
