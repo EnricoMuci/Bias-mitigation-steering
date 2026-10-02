@@ -83,11 +83,14 @@ parser.add_argument('-p', '--path', type=str, default=None, help='model path')
 parser.add_argument('-q', '--quantization', action='store_true', help='Insert flag to quantize the model')
 parser.add_argument('-e', '--experiment', type=str, default=None, help='Use it to change the experiment')
 
+parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
+parser.add_argument('-t', '--vector-types', nargs='*', type=str, default=None, choices=['train', 'train+prompt'], help='train[+prompt]')
+
 parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of retrieved sentences')
 parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
 
 parser.add_argument('-d', '--datasets', nargs='*', choices=list(DATASETS_REGISTRY.keys()),
-                    default= ['bbq', 'mmlu'],  #list(EVAL_REGISTRY.keys()),
+                    default=  ['bbq', 'mmlu'],  #list(EVAL_REGISTRY.keys()),
                     help='Which datasets to run (default: BBQ and MMLU). E.g. --evals bbq mmlu')
 
 parser.add_argument('-c', '--config', type=str, default=None,
@@ -175,7 +178,13 @@ def run_evaluations_for_config(config_file, model):
 
     for _, config_row in tqdm(config_df.iterrows(), total=len(config_df), desc="Total Configs Progress", position=0):
         axis = config_row['axis']
-        vector_type = config_row['vector_type'] # 'train' 'train+prompt'
+        if args.axes is not None and axis not in args.axes:
+            continue
+
+        vector_type = config_row['vector_type']  # 'train' 'train+prompt'
+        if args.vector_types is not None and vector_type not in args.vector_types:
+            continue
+
         layer = int(config_row['layer'])
         coeff = config_row['coeff']
         bbq_accuracy = config_row['bbq_accuracy']
