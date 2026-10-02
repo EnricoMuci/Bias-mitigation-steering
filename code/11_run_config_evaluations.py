@@ -83,6 +83,8 @@ parser.add_argument('-p', '--path', type=str, default=None, help='model path')
 parser.add_argument('-q', '--quantization', action='store_true', help='Insert flag to quantize the model')
 parser.add_argument('-e', '--experiment', type=str, default=None, help='Use it to change the experiment')
 
+parser.add_argument('-o', '--only-preview', action='store_true', help='Show only the preview without computing')
+
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
 parser.add_argument('-t', '--vector-types', nargs='*', type=str, default=None, choices=['train', 'train+prompt'], help='train[+prompt]')
 
@@ -129,6 +131,38 @@ def _eval_already_done(existing_df, axis, vector_type, eval_key):
     return any(pd.notna(row.get(c)) for c in matching_cols)
 
 
+def preview_status(config_df, existing_df, requested_datasets):
+    """Print a preview of the current evaluation status before running."""
+    print("\n" + "=" * 55)
+    print("PRE-RUN STATUS CHECK")
+    print("=" * 55)
+
+    all_done = True
+    total_evals = len(requested_datasets)
+
+    for _, row in config_df.iterrows():
+        axis = row['axis']
+        vector_type = row['vector_type']
+
+        done_count = 0
+        for eval_key in requested_datasets:
+            # Uses the updated _eval_already_done with composite keys (axis, vector_type)
+            if _eval_already_done(existing_df, axis, vector_type, eval_key):
+                done_count += 1
+
+        if done_count == total_evals:
+            print(f"  ✓ {axis:15s} ({vector_type})  ->  complete ({done_count}/{total_evals})")
+        elif done_count > 0:
+            print(f"  ○ {axis:15s} ({vector_type})  ->  partial ({done_count}/{total_evals})")
+            all_done = False
+        else:
+            print(f"  ✗ {axis:15s} ({vector_type})  ->  not initialized (0/{total_evals})")
+            all_done = False
+
+    print("=" * 55 + "\n")
+    return all_done
+
+
 def run_evaluations_for_config(config_file, model):
     """Run all evaluations for a given config file by calling functions from individual files.
 
@@ -151,6 +185,20 @@ def run_evaluations_for_config(config_file, model):
         existing_df = pd.read_csv(results_file).set_index(['axis','vector_type'], drop=False)
         print(f"Found existing results file ({len(existing_df)} rows) — resuming, "
               f"already-completed evaluations will be skipped.")
+
+    requested_datasets = [ds for ds in DATASETS_REGISTRY if ds in args.datasets]
+
+    if args.axes is not None:
+        config_df = config_df[config_df['axis'].isin(args.axes)]
+    if args.vector_types is not None:
+        config_df = config_df[config_df['vector_type'].isin(args.vector_types)]
+
+    # Show preview
+    all_done = preview_status(config_df, existing_df, requested_datasets)
+
+    # Optional: exit early if everything is completed or if in preview-only mode
+    if args.only_preview or all_done:
+        return
 
     def checkpoint(row):
         """Merge one axis' result into the results file on disk immediately,
@@ -175,16 +223,9 @@ def run_evaluations_for_config(config_file, model):
             existing_df = pd.concat([existing_df, new_row_df])
         existing_df.reset_index(drop=True).to_csv(results_file, index=False)
 
-    requested_datasets = [ds for ds in DATASETS_REGISTRY if ds in args.datasets]
-
     for _, config_row in tqdm(config_df.iterrows(), total=len(config_df), desc="Total Configs Progress", position=0):
         axis = config_row['axis']
-        if args.axes is not None and axis not in args.axes:
-            continue
-
         vector_type = config_row['vector_type']  # 'train' 'train+prompt'
-        if args.vector_types is not None and vector_type not in args.vector_types:
-            continue
 
         layer = int(config_row['layer'])
         coeff = config_row['coeff']
