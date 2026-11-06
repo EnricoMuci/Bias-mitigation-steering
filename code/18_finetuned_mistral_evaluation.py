@@ -132,7 +132,7 @@ def run_finetuned_evaluations():
     logger.info("Starting fine-tuned Mistral evaluation...")
     
     # Model and tokenizer setup
-    model_path = "../models/mistral-bbq-finetuned"
+    model_path = "../models/mistral-full-bbq-finetuned"
     base_model_name = "mistralai/Mistral-7B-Instruct-v0.1"
     
     # Initialize tokenizer
@@ -227,8 +227,8 @@ def run_finetuned_evaluations():
     
     # Save results
     results_df = pd.DataFrame(results)
-    os.makedirs("../results/mistral", exist_ok=True)
-    results_file = f"../results/mistral/finetuned_{timestamp}.csv"
+    os.makedirs("../results/mistral-full", exist_ok=True)
+    results_file = f"../results/mistral-full/finetuned_{timestamp}.csv"
     results_df.to_csv(results_file, index=False)
     
     logger.info("="*60)

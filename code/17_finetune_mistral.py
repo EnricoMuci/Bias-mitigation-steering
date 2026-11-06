@@ -149,7 +149,7 @@ def main():
     
     # Configuration
     model_name = "mistralai/Mistral-7B-Instruct-v0.1"
-    output_dir = "../models/mistral-bbq-finetuned"
+    output_dir = "../models/mistral-full-bbq-finetuned"
     
     # Set HuggingFace cache directory
     os.environ["HF_HOME"] = "/scratch/zara/.cache/huggingface"
@@ -221,7 +221,7 @@ def main():
         remove_unused_columns=False,
         dataloader_pin_memory=False,
         report_to=None,  # Disable wandb/tensorboard
-        run_name=f"mistral-bbq-finetune-{timestamp}"
+        run_name=f"mistral-full-bbq-finetune-{timestamp}"
     )
     
     # Set up trainer

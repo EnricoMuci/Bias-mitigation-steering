@@ -18,7 +18,7 @@ else:
 model_short_names = {
     "Qwen/Qwen2.5-7B-Instruct": "qwen",
     "meta-llama/Llama-3.1-8B-Instruct": "llama",
-    "mistralai/Mistral-7B-Instruct-v0.1": "mistral",
+    "mistralai/Mistral-7B-Instruct-v0.1": "mistral-full",
 }
 
 model_short_name = model_short_names.get(model_name)

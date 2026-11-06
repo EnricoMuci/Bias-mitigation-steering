@@ -10,7 +10,7 @@ import os
 
 def load_results():
     """Load results from different methods."""
-    results_dir = "results/mistral"
+    results_dir = "results/mistral-full"
     
     # Define file mappings
     files = {
