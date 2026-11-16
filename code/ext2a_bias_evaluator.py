@@ -1,3 +1,4 @@
+
 class BiasEvaluator:
     def __init__(self, sensitivity: float, noise: float = 0.0):
         # Sensitivity represents how much the LLM is influenced by the embedder
