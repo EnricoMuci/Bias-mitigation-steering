@@ -7,7 +7,18 @@ from utils import get_output, get_selfdebias_output, calculate_disambig_bias_sco
 
 
 def predict_bbq_row(row, model, vector, coeff, tokenizer, use_fairness_prompt=False, use_self_debias=False):
-    """Predict on a single BBQ row."""
+    """
+    Predict on a single BBQ row.
+    Args:
+        model: LLM generator
+        coeff: steering strength coefficient
+        tokenizer: tokenizer object
+        use_fairness_prompt (bool): whether to use fairness prompt (train → train+prompt)
+        use_self_debias (bool): whether to use self Debiasing technique
+
+    Returns:
+        A Pandas.Series object containing the predicted answer
+    """
     context = row["context"]
     question = row["question"]
     answers = [row["ans0"], row["ans1"], row["ans2"]]
@@ -34,18 +45,19 @@ def predict_bbq_row(row, model, vector, coeff, tokenizer, use_fairness_prompt=Fa
             generated_answer = get_selfdebias_output(input_text, model, tokenizer, vector, coeff).lower()
         else:
             generated_answer = get_output(input_text, model, tokenizer, vector, coeff).lower()
+
     except Exception as e:
         # Defensive: one bad generation shouldn't kill an unattended SLURM job.
         tqdm.write(f"    [warn] generation failed on a row, marking as incorrect: {e}")
         return pd.Series({"ans": "", "prediction": -1, "correct": False})
 
     predicted_label = -1
-    for i, letter in enumerate(answer_letters):
+    for i, letter in enumerate(answer_letters): # possible letters → (0,a), (1,b) (2,c)
         if letter in generated_answer[:2]:
-            predicted_label = i
+            predicted_label = i  # index, not letter
             break
 
-    if predicted_label == -1:
+    if predicted_label == -1: # if the model wrongly wrote the entire answer instead of its letter
         for i, answer in enumerate(answers):
             if answer in generated_answer:
                 predicted_label = i
@@ -61,13 +73,23 @@ def predict_bbq_row(row, model, vector, coeff, tokenizer, use_fairness_prompt=Fa
 
 
 def run_bbq_evaluation(model, vector, coeff, axis, tokenizer, use_fairness_prompt=False, use_self_debias=False):
-    """Run evaluation on BBQ test set for a specific axis."""
+    """
+    Run evaluation on BBQ test set for a specific axis.
+
+    Args:
+        model: LLM generator
+        vector: steering vector
+        coeff: steering strength coefficient
+        tokenizer: tokenizer object
+        use_fairness_prompt (bool): whether to use fairness prompt
+        use_self_debias (bool): whether to use self Debias technique
+
+    """
     print(f"Running BBQ evaluation for {axis}...")
 
     # Load test data
-    test_df = pd.read_csv(f"../data/bbq_test/{axis}_test.csv")  # stereotype
+    test_df = pd.read_csv(f"../data/bbq_test/{axis}_test.csv")  # test-set for specific axis
 
-    # Inizializza TQDM per Pandas (position=1 la mette sotto la barra principale, leave=False la fa sparire quando finisce)
     tqdm.pandas(desc=f"BBQ {axis}", position=1, leave=False)
 
     # Apply predictions

@@ -13,6 +13,15 @@ bbq_axes = ["age", "appearance", "disability", "gender", "nationality", "race", 
 
 
 def get_output(input_text, model, tokenizer, vector=None, coeff=0, max_new_tokens=20, repetition_penalty=1.1):
+    """
+    Generate the output answer (only the corresponding letter: a, b, c)
+    Args:
+        input_text (str): prompt text with question, possible answers (and letters), context...
+        model: LLM generator model
+        tokenizer: the AutoTokenizer (it can be standard or customized)
+        vector: steering vector: if None, no steering is applied
+        coeff (int): steering strength coefficient
+    """
     messages = [
         {"role": "user", "content": input_text}
     ]
@@ -37,7 +46,7 @@ def get_output(input_text, model, tokenizer, vector=None, coeff=0, max_new_token
         "return_dict_in_generate": True
     }
 
-    if vector:
+    if vector: # steering application (if None → no steering)
         model.set_control(vector, coeff)
 
     generated_outputs = model.generate(**input_ids, **settings)
@@ -50,6 +59,11 @@ def get_output(input_text, model, tokenizer, vector=None, coeff=0, max_new_token
 
 
 def load_and_tokenize_contrastive(model_path: str, filepath: str, prompt: str = "") -> Dataset:
+    """
+    Create contrastive pairs with two elements:
+    - positive: correct answer
+    - negative: stereotypical answer
+    """
     ds_raw = Dataset.load_from_file(filepath)
 
     tokenizer = AutoTokenizer.from_pretrained(model_path, token=hf_token)
@@ -176,7 +190,7 @@ def get_selfdebias_output(input_text, model, tokenizer, vector=None, coeff=0, ma
             device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # Prepare input for generation
-        messages = [{"role": "user", "content": input_text}]
+        messages = [{"role": "user", "content": input_text}]  # First message: question, context, answer options etc.
         chat_input = tokenizer.apply_chat_template(
             messages,
             tokenize=False,
