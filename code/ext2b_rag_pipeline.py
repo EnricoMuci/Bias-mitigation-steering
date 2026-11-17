@@ -30,5 +30,4 @@ class FairRAGPipeline:
             intervention_direction=self.steering_vector,
             alpha=self.steering_coeff
         )
-
         return response
