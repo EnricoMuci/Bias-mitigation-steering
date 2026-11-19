@@ -38,7 +38,7 @@ transformers.logging.set_verbosity_error()
 
 import zoneinfo
 
-tz_set = zoneinfo.ZoneInfo("Europe/Rome") # FIXME : Remove
+tz_set = zoneinfo.ZoneInfo("Europe/Rome")  # FIXME : Remove
 
 ALL_OPERATIONS = ['layer', 'separability', 'best']
 
@@ -50,6 +50,9 @@ parser.add_argument('-q', '--quantization', action='store_true', help='Insert fl
 parser.add_argument('-t', '--type', type=int, default=2, help='train[+prompt] → in get_acc_change_per_layer')
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
 parser.add_argument('-m', '--mode', nargs='*', type=str, default=None, help=f"{ALL_OPERATIONS}")
+
+parser.add_argument('--first-layer', type=int, default=5,
+                    help=f"First layer to consider: previous ones will be ignored")
 
 parser.add_argument('-c', '--colab', action='store_true', help='executing on Colab')
 parser.add_argument('-o', '--only-preview', action='store_true', help='only preview')
@@ -666,6 +669,9 @@ def get_acc_change_per_layer():
 
 def find_best_layers(first_layer: int = 5):
     """
+    For each axis, calculate the best layer (maximum accuracy) which apply steering to
+    Args:
+        first_layer: first layer to calculate accuracy for: previous layers are ignored
     """
     results_train = []
     results_train_prompt = []
@@ -722,4 +728,4 @@ if __name__ == '__main__':  # FIXME
         if 'layer' in OPERATIONS:
             get_acc_change_per_layer()
         if 'best' in OPERATIONS:
-            find_best_layers()
+            find_best_layers(first_layer=args.first_layer)
