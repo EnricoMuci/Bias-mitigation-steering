@@ -21,6 +21,7 @@ def predict_bbq_row(row, model, vector, coeff, tokenizer, use_fairness_prompt=Fa
     """
     context = row["context"]
     question = row["question"]
+    injected = row.get("injected_context", "")  # empty if no injection was applied
     answers = [row["ans0"], row["ans1"], row["ans2"]]
     answer_letters = ["a", "b", "c"]
 
@@ -33,6 +34,7 @@ def predict_bbq_row(row, model, vector, coeff, tokenizer, use_fairness_prompt=Fa
         f"{fairness_instruction}"
         f"Answer with only a single letter.\n\n"
         f"The following are multiple choice questions (with answers):\n"
+        f"{injected}"
         f"{context} {question}\n"
         f"(a) {answers[0]}\n"
         f"(b) {answers[1]}\n"
@@ -72,7 +74,9 @@ def predict_bbq_row(row, model, vector, coeff, tokenizer, use_fairness_prompt=Fa
     })
 
 
-def run_bbq_evaluation(model, vector, coeff, axis, tokenizer, use_fairness_prompt=False, use_self_debias=False):
+def run_bbq_evaluation(model, vector, coeff, axis, tokenizer,
+                       use_fairness_prompt=False, use_self_debias=False,
+                       injector=None):
     """
     Run evaluation on BBQ test set for a specific axis.
 
@@ -83,12 +87,16 @@ def run_bbq_evaluation(model, vector, coeff, axis, tokenizer, use_fairness_promp
         tokenizer: tokenizer object
         use_fairness_prompt (bool): whether to use fairness prompt
         use_self_debias (bool): whether to use self Debias technique
+        injector: optional injector (see retrieval_injection.py); None = no injected context
 
     """
     print(f"Running BBQ evaluation for {axis}...")
 
     # Load test data
     test_df = pd.read_csv(f"../data/bbq_test/{axis}_test.csv")  # test-set for specific axis
+
+    if injector is not None:
+        test_df = injector.inject(test_df, axis, cache_name="test")
 
     tqdm.pandas(desc=f"BBQ {axis}", position=1, leave=False)
 

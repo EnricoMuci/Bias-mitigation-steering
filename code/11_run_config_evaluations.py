@@ -10,12 +10,15 @@ import torch
 from dialz import SteeringVector
 
 from utils_new import (get_args, get_model_short_name, define_custom_tokenizer, configure_model, set_steering_layer,
-                       BASE_EXPERIMENT)
+                       BASE_EXPERIMENT, CROWS_PATH)
 
 # Import functions from the individual evaluation files
 # Note: Using importlib because Python module names can't start with numbers
 from importlib import import_module
 import glob
+
+import inspect
+from retrieval_injection import build_injector
 
 # Registry describing each pluggable evaluation: which module/function to
 # call, which axes it's relevant for (None = all axes), and the column
@@ -70,6 +73,12 @@ def get_eval_module(eval_key):
         _loaded_modules[eval_key] = import_module(DATASETS_REGISTRY[eval_key]['module_name'])
     return _loaded_modules[eval_key]
 
+def load_retriever(spec):
+    """Load a retriever from 'module_name:factory_name' (factory takes no arguments)."""
+    if spec is None:
+        raise ValueError("--retriever-spec is required with --injection-mode retriever")
+    module_name, factory_name = spec.split(':')
+    return getattr(import_module(module_name), factory_name)()
 
 # Global configuration
 USE_FAIRNESS_PROMPT = False  # Set to True to enable fairness prompting
@@ -99,6 +108,11 @@ parser.add_argument('-d', '--datasets', nargs='*', choices=list(DATASETS_REGISTR
 parser.add_argument('-c', '--config', type=str, default=None,
                     help='Path to a single config CSV to evaluate. Default: every *.csv in ../data/configs/[...]')
 
+parser.add_argument('-m', '--injection-mode', type=str, default='random', choices=['random', 'retriever'],
+                    help='Injection strategy used when k > 0')
+parser.add_argument('-r', '--retriever-spec', type=str, default=None,
+                    help="Retriever factory as 'module_name:factory_name'")
+
 args = parser.parse_args()
 
 (model_name, model_path) = get_args([args.name, args.path])
@@ -115,7 +129,15 @@ RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}"
 
 # Injection parameters
 k = args.k_sentences  # top-k sentences
-b = args.bias_ratio  # fraction of pro-stereotyped sentences
+b = args.bias_ratio  # fraction of pro-stereotyped sentences (random mode only)
+INJECTION_MODE = args.injection_mode if k > 0 else 'none'
+
+CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}"
+RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}"
+if INJECTION_MODE == 'random':
+    RESULTS_PATH = f"{RESULTS_PATH}/k-{k}_b-{b}"
+elif INJECTION_MODE == 'retriever':
+    RESULTS_PATH = f"{RESULTS_PATH}/k-{k}_retriever"
 
 
 def _eval_already_done(existing_df, axis, vector_type, eval_key):
@@ -164,7 +186,7 @@ def preview_status(config_df, existing_df, requested_datasets):
     return all_done
 
 
-def run_evaluations_for_config(config_file, model):
+def run_evaluations_for_config(config_file, model, injector=None):
     """Run all evaluations for a given config file by calling functions from individual files.
 
     `model` is a single QuantizedSteeringModel instance, loaded once by the
@@ -260,7 +282,9 @@ def run_evaluations_for_config(config_file, model):
             'bbq_accuracy': bbq_accuracy,
             'mmlu_accuracy': mmlu_accuracy,
             'fairness_prompt': USE_FAIRNESS_PROMPT,
-            'self_debias': USE_SELF_DEBIAS
+            'self_debias': USE_SELF_DEBIAS,
+            **(injector.describe() if injector is not None
+               else {'injection_mode': 'none', 'k_sentences': 0}),
         }
 
         # Run every pending evaluation (already-completed ones were filtered out above)
@@ -367,11 +391,22 @@ def main():
     print("Loading base quantized model (once for the whole run)...")
     model = configure_model(model_name, model_path, layer_ids=[])
 
+    # Injector configuration
+    retriever = load_retriever(args.retriever_spec) if INJECTION_MODE == 'retriever' else None
+    injector = build_injector(INJECTION_MODE, k, b, CROWS_PATH, retriever)
+    print(f"Injection: {injector.describe() if injector is not None else 'none'}")
+
+    if injector is not None and 'bbq' in args.datasets:
+        bbq_func = getattr(get_eval_module('bbq'), DATASETS_REGISTRY['bbq']['func_attr'])
+        if 'injector' not in inspect.signature(bbq_func).parameters:
+            raise RuntimeError("run_bbq_evaluation must accept an 'injector' argument "
+                               "(see 6_bbq_evaluation.py).")
+
     for config_file in config_files:
         print(f"\n{'=' * 60}")
         print(f"Config file: {config_file}")
         print('=' * 60)
-        run_evaluations_for_config(config_file, model)
+        run_evaluations_for_config(config_file, model, injector)
 
     print("\nAll evaluations complete!")
 
