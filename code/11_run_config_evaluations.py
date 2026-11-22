@@ -117,7 +117,7 @@ if EXPERIMENT == 'reproduction': # only reproduction
     CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}"
     RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}"
 else: # add the k_b directory
-    CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}"
+    CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}/k-{k}_b-{b}"
     RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}/k-{k}_b-{b}"
 
 
