@@ -49,7 +49,7 @@ def get_model_short_name(model_name, quantized:bool=True):
     model_short_names = {
         "Qwen/Qwen2.5-7B-Instruct": "qwen",
         "meta-llama/Llama-3.1-8B-Instruct": "llama",
-        "mistralai/Mistral-7B-Instruct-v0.1": "mistral-full",
+        "mistralai/Mistral-7B-Instruct-v0.1": "mistral",
     }
     base_name = model_short_names.get(model_name)
     if not base_name:
@@ -212,6 +212,9 @@ def set_steering_layer(model, layer_id):
 
 
 def define_custom_tokenizer(model_name: str, model_path: str | None = None, token = None) -> AutoTokenizer:
+    """
+    Define a customized tokenizer
+    """
     if model_path is not None:  # custom tokenizer
         tokenizer = AutoTokenizer.from_pretrained(model_path)  # Loaded model
     else:
@@ -221,6 +224,9 @@ def define_custom_tokenizer(model_name: str, model_path: str | None = None, toke
 
 
 def load_and_tokenize_contrastive(model_name: str, model_path: str, filepath: str, prompt: str = "") -> Dataset:
+    """
+    Create contrastive pairs
+    """
     ds_raw = Dataset.load_from_file(filepath)
 
     # tokenizer = AutoTokenizer.from_pretrained(model_path, token=hf_token)
