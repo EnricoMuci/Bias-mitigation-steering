@@ -4,7 +4,6 @@ import glob
 
 import argparse
 
-
 from utils import bbq_axes
 from utils_new import get_args, get_model_short_name, BASE_EXPERIMENT
 
@@ -34,6 +33,8 @@ b = args.bias_ratio  # ration of pro-stereotyped sentences
 
 
 def set_dir_paths():
+    """
+    """
     coeff_base_path = f'../data/coeff_scores/{model_short_name}/{EXPERIMENT}'
     config_base_path = f'../data/configs/{model_short_name}/{EXPERIMENT}'
 
@@ -50,10 +51,11 @@ def set_dir_paths():
         print(f'Configurations in: {config_base_path} [K = 0]')
         return coeff_base_path, config_base_path
 
-    else: # error
+    else:  # error
         print(f'Error! Please check:\nExperiment = {EXPERIMENT}\nK = {k}\nB = {b}\n'
               f'Fallback on {coeff_base_path} and {config_base_path} but, please, check!')
         return coeff_base_path, config_base_path
+
 
 COMPLETE_COEFF_DIR, CONFIG_DIR = set_dir_paths()
 
@@ -66,7 +68,7 @@ def generate_config_csvs():
     if args.axes is not None:
         axes = args.axes.copy()  # list type
     else:
-        axes = bbq_axes # all BBQ  axes from utils
+        axes = bbq_axes  # all BBQ  axes from utils
     print(f'\n{len(axes)} configurations to be processed: {axes}\n')
 
     # Get all folders in coeff_scores/mistral-full
@@ -143,7 +145,7 @@ def generate_baseline_csv():
     for every axis. This is arbitrary (coeff=0 nullifies the steering
     vector's effect entirely), but we mirror it here for reproducibility.
     """
-    BASELINE_VT = "train+prompt" # coeff-scores/
+    BASELINE_VT = "train+prompt"  # coeff-scores/
     BASELINE_TOP_VT = f"top_{BASELINE_VT}"  # best-layers/
 
     if args.axes is not None:

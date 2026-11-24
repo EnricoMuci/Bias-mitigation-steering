@@ -73,12 +73,14 @@ def get_eval_module(eval_key):
         _loaded_modules[eval_key] = import_module(DATASETS_REGISTRY[eval_key]['module_name'])
     return _loaded_modules[eval_key]
 
+
 def load_retriever(spec):
     """Load a retriever from 'module_name:factory_name' (factory takes no arguments)."""
     if spec is None:
         raise ValueError("--retriever-spec is required with --injection-mode retriever")
     module_name, factory_name = spec.split(':')
     return getattr(import_module(module_name), factory_name)()
+
 
 # Global configuration
 USE_FAIRNESS_PROMPT = False  # Set to True to enable fairness prompting
@@ -397,6 +399,8 @@ def main():
     # Injector configuration
     retriever = load_retriever(args.retriever_spec) if INJECTION_MODE == 'retriever' else None
     injector = build_injector(INJECTION_MODE, k, b, CROWS_PATH, retriever)
+    if injector is not None:
+        injector.cache_dir = f"../cache/{EXPERIMENT}"
     print(f"Injection: {injector.describe() if injector is not None else 'none'}")
 
     if injector is not None and 'bbq' in args.datasets:

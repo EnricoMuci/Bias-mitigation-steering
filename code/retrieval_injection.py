@@ -46,7 +46,8 @@ def format_injected_block(sentences):
     return injected_str + "\n"
 
 
-def inject_crows_bias_to_df(bbq_df, crows_df, axis, num_sentences=4, bias_ratio=0.5):
+def inject_crows_bias_to_df(bbq_df, crows_df, axis,
+                            num_sentences=4, bias_ratio=0.5):
     """Random CrowS injection (moved verbatim from 5_optimize_coeff.py).
 
     Behavior is unchanged, so contexts are identical to the ones produced by
