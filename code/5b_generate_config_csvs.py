@@ -58,6 +58,7 @@ def set_dir_paths():
 
 
 COMPLETE_COEFF_DIR, CONFIG_DIR = set_dir_paths()
+os.makedirs(f'../{CONFIG_DIR}', exist_ok=True)
 
 
 def generate_config_csvs():
@@ -205,7 +206,7 @@ def generate_baseline_csv():
         print(f'{axis} baseline correctly processed\n')
 
     if config_data:
-        os.makedirs(f'../{CONFIG_DIR}', exist_ok=True)
+        # os.makedirs(f'../{CONFIG_DIR}', exist_ok=True)
         config_df = pd.DataFrame(config_data)
         config_file = f"{CONFIG_DIR}/baselines.csv"
         config_df.to_csv(config_file, index=False)
