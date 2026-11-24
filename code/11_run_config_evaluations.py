@@ -33,7 +33,7 @@ DATASETS_REGISTRY = {
         'prefix': 'bbq',
         'display_name': 'BBQ',
     },
-    'mmlu': {  # used for accuracy
+    'mmlu': {
         'module_name': '7_mmlu_evaluation',
         'func_attr': 'run_mmlu_evaluation',
         'relevant_axes': None,  # all axes
@@ -95,14 +95,13 @@ parser.add_argument('-e', '--experiment', type=str, default=None, help='Use it t
 parser.add_argument('-o', '--only-preview', action='store_true', help='Show only the preview without computing')
 
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
-parser.add_argument('-t', '--vector-types', nargs='*', type=str, default=None, choices=['train', 'train+prompt'],
-                    help='train[+prompt]')
+parser.add_argument('-t', '--vector-types', nargs='*', type=str, default=None, choices=['train', 'train+prompt'], help='train[+prompt]')
 
 parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of retrieved sentences')
 parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
 
 parser.add_argument('-d', '--datasets', nargs='*', choices=list(DATASETS_REGISTRY.keys()),
-                    default=['bbq', 'mmlu'],  # list(EVAL_REGISTRY.keys()),
+                    default=  ['bbq', 'mmlu'],  #list(EVAL_REGISTRY.keys()),
                     help='Which datasets to run (default: BBQ and MMLU). E.g. --evals bbq mmlu')
 
 parser.add_argument('-c', '--config', type=str, default=None,
@@ -124,9 +123,6 @@ if args.experiment is not None:
 else:
     EXPERIMENT = BASE_EXPERIMENT
 
-CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}"
-RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}"
-
 # Injection parameters
 k = args.k_sentences  # top-k sentences
 b = args.bias_ratio  # fraction of pro-stereotyped sentences (random mode only)
@@ -138,6 +134,13 @@ if INJECTION_MODE == 'random':
     RESULTS_PATH = f"{RESULTS_PATH}/k-{k}_b-{b}"
 elif INJECTION_MODE == 'retriever':
     RESULTS_PATH = f"{RESULTS_PATH}/k-{k}_retriever"
+
+if EXPERIMENT == 'reproduction': # only reproduction
+    CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}"
+    RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}"
+else: # add the k_b directory
+    CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}/k-{k}_b-{b}"
+    RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}/k-{k}_b-{b}"
 
 
 def _eval_already_done(existing_df, axis, vector_type, eval_key):
@@ -200,12 +203,12 @@ def run_evaluations_for_config(config_file, model, injector=None):
     config_df = pd.read_csv(config_file)
     print(f"Loaded {len(config_df)} configurations")
 
-    os.makedirs(RESULTS_PATH, exist_ok=True)
+    os.makedirs(RESULTS_PATH , exist_ok=True)
     results_file = f"{RESULTS_PATH}/{config_name}.csv"
 
     existing_df = None
     if os.path.exists(results_file):
-        existing_df = pd.read_csv(results_file).set_index(['axis', 'vector_type'], drop=False)
+        existing_df = pd.read_csv(results_file).set_index(['axis','vector_type'], drop=False)
         print(f"Found existing results file ({len(existing_df)} rows) — resuming, "
               f"already-completed evaluations will be skipped.")
 
@@ -237,12 +240,12 @@ def run_evaluations_for_config(config_file, model, injector=None):
         nonlocal existing_df
         axis_value = row['axis']
         if existing_df is None:
-            existing_df = pd.DataFrame([row]).set_index(['axis', 'vector_type'], drop=False)
+            existing_df = pd.DataFrame([row]).set_index(['axis','vector_type'], drop=False)
         elif axis_value in existing_df.index:
             for key, value in row.items():
                 existing_df.loc[axis_value, key] = value
         else:
-            new_row_df = pd.DataFrame([row]).set_index(['axis', 'vector_type'], drop=False)
+            new_row_df = pd.DataFrame([row]).set_index(['axis','vector_type'], drop=False)
             existing_df = pd.concat([existing_df, new_row_df])
         existing_df.reset_index(drop=True).to_csv(results_file, index=False)
 
