@@ -62,9 +62,6 @@ if args.axes is not None:
 else:
     required_axes = bbq_axes
 
-
-
-
 if args.experiment is not None:
     EXPERIMENT = args.experiment
 else:
@@ -77,6 +74,7 @@ b = args.bias_ratio  # fraction of pro-stereotyped sentences
 BEST_LAYERS_DIR = f'../data/layer_scores/{model_short_name}/best_layers'
 BBQ_VALIDATE_DIR = f"../data/bbq_validate"  # 1 file for each axis
 TOP_VECTOR_TYPES = ["top_train", "top_train+prompt"]
+
 
 def set_coeff_dir():
     base_path = f'../data/coeff_scores/{model_short_name}/{EXPERIMENT}'
@@ -91,6 +89,7 @@ def set_coeff_dir():
         print(f'Error! Please check:\nExperiment = {EXPERIMENT}\nK = {k}\nB = {b}\n'
               f'Fallback on {base_path} but, please, check!')
         return base_path
+
 
 COEFF_SCORES_DIR = set_coeff_dir()
 

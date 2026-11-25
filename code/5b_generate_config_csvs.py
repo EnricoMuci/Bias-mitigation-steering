@@ -34,16 +34,18 @@ b = args.bias_ratio  # ration of pro-stereotyped sentences
 
 def set_dir_paths():
     """
+    Set directory paths
     """
     coeff_base_path = f'../data/coeff_scores/{model_short_name}/{EXPERIMENT}'
     config_base_path = f'../data/configs/{model_short_name}/{EXPERIMENT}'
 
-    if k > 0 and EXPERIMENT not in ['reproduction', 'original']:  # injections
-        coeff_scores_dir = os.path.join(coeff_base_path, f"k-{k}_b-{b}")  # add path
+    if k > 0 and EXPERIMENT not in ['reproduction', 'original']:  # no injections
+        coeff_scores_dir = os.path.join(coeff_base_path, f"k-{k}_b-{b}")  # add coeffs path
         print(f'Coefficient scores in: {coeff_scores_dir} [K = {k} | B = {b}]')
 
-        config_dir_path = os.path.join(config_base_path, f"k-{k}_b-{b}")  # add path
+        config_dir_path = os.path.join(config_base_path, f"k-{k}_b-{b}")  # add configs path
         print(f'Configurations in: {config_dir_path} [K = {k} | B = {b}]')
+
         return coeff_scores_dir, config_dir_path
 
     elif k <= 0 and EXPERIMENT in ['reproduction', 'original']:  # no injections
@@ -86,12 +88,14 @@ def generate_config_csvs():
         for axis in axes:
             print(f'Processing axis: {axis}')
             # Load the corresponding best layers file
-
             best_layers_file = f"../data/layer_scores/{model_short_name}/best_layers/top_{vt_dir}.csv"
+
             if os.path.exists(best_layers_file):
                 best_layers_df = pd.read_csv(best_layers_file)
+
                 # Find the row for this axis
                 axis_row = best_layers_df[best_layers_df['axis'] == axis]
+
                 if not axis_row.empty:
                     layer = axis_row.iloc[0]['max_layer']
                     vector_type = axis_row.iloc[0]['vt']
@@ -104,7 +108,6 @@ def generate_config_csvs():
 
             # Find CSV files (with coefficients scores) for this axis in this folder
             coeff_csv = f"{COMPLETE_COEFF_DIR}/{vt_dir}/{axis}_*.csv"
-
             csv_files = glob.glob(coeff_csv)
 
             if csv_files and layer is not None:
@@ -145,8 +148,8 @@ def generate_baseline_csv():
     for every axis. This is arbitrary (coeff=0 nullifies the steering
     vector's effect entirely), but we mirror it here for reproducibility.
     """
-    BASELINE_VT = "train+prompt"  # coeff-scores/
-    BASELINE_TOP_VT = f"top_{BASELINE_VT}"  # best-layers/
+    BASELINE_VT = "train+prompt"  # select from coeff_scores/
+    BASELINE_TOP_VT = f"top_{BASELINE_VT}"  # select from best-layers/
 
     if args.axes is not None:
         axes = args.axes.copy()
@@ -158,6 +161,7 @@ def generate_baseline_csv():
     if not os.path.exists(best_layers_file):
         print(f"Missing best layers file: {best_layers_file}. Skipping baseline generation.")
         return
+
     best_layers_df = pd.read_csv(best_layers_file)
 
     config_data = []

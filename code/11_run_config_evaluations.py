@@ -64,14 +64,14 @@ DATASETS_REGISTRY = {
     },
 }
 
-_loaded_modules = {}
+loaded_modules = {}
 
 
 def get_eval_module(eval_key):
     """Lazily import an evaluation module the first time it's needed."""
-    if eval_key not in _loaded_modules:
-        _loaded_modules[eval_key] = import_module(DATASETS_REGISTRY[eval_key]['module_name'])
-    return _loaded_modules[eval_key]
+    if eval_key not in loaded_modules:
+        loaded_modules[eval_key] = import_module(DATASETS_REGISTRY[eval_key]['module_name'])
+    return loaded_modules[eval_key]
 
 
 def load_retriever(spec):
@@ -103,7 +103,7 @@ parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of 
 parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
 
 parser.add_argument('-d', '--datasets', nargs='*', choices=list(DATASETS_REGISTRY.keys()),
-                    default=  ['bbq', 'mmlu'],  #list(EVAL_REGISTRY.keys()),
+                    default= ['bbq', 'mmlu'],  #list(EVAL_REGISTRY.keys()),
                     help='Which datasets to run (default: BBQ and MMLU). E.g. --evals bbq mmlu')
 
 parser.add_argument('-c', '--config', type=str, default=None,
@@ -137,10 +137,10 @@ if INJECTION_MODE == 'random':
 elif INJECTION_MODE == 'retriever':
     RESULTS_PATH = f"{RESULTS_PATH}/k-{k}_retriever"
 
-if EXPERIMENT == 'reproduction': # only reproduction
+if EXPERIMENT == 'reproduction':  # only reproduction
     CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}"
     RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}"
-else: # add the k_b directory
+else:  # add the k_b directory
     CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}/k-{k}_b-{b}"
     RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}/k-{k}_b-{b}"
 
@@ -199,7 +199,7 @@ def run_evaluations_for_config(config_file, model, injector=None):
     is swapped between axes (see set_steering_layer), not the whole model.
     """
     config_name = os.path.basename(config_file).replace('.csv', '')
-    print(f"\nRunning evaluations for config: {config_name}")
+    print(f"\nRunning evaluations for config: {config_name}") # [baseline, train, train+prompt]
 
     # Load config
     config_df = pd.read_csv(config_file)
