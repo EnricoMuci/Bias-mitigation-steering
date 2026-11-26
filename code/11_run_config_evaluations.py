@@ -17,8 +17,8 @@ from utils_new import (get_args, get_model_short_name, define_custom_tokenizer, 
 from importlib import import_module
 import glob
 
-import inspect
-from retrieval_injection import build_injector
+# import inspect
+# from retrieval_injection import build_injector
 
 # Registry describing each pluggable evaluation: which module/function to
 # call, which axes it's relevant for (None = all axes), and the column
@@ -110,10 +110,10 @@ parser.add_argument('-d', '--datasets', nargs='*', choices=list(DATASETS_REGISTR
 parser.add_argument('-c', '--config', type=str, default=None,
                     help='Path to a single config CSV to evaluate. Default: every *.csv in ../data/configs/[...]')
 
-parser.add_argument('-m', '--injection-mode', type=str, default='random', choices=['random', 'retriever'],
-                    help='Injection strategy used when k > 0')
-parser.add_argument('-r', '--retriever-spec', type=str, default=None,
-                    help="Retriever factory as 'module_name:factory_name'")
+# parser.add_argument('-m', '--injection-mode', type=str, default='random', choices=['random', 'retriever'],
+#                     help='Injection strategy used when k > 0')
+# parser.add_argument('-r', '--retriever-spec', type=str, default=None,
+#                     help="Retriever factory as 'module_name:factory_name'")
 
 args = parser.parse_args()
 
@@ -193,7 +193,7 @@ def preview_status(config_df, existing_df, requested_datasets):
     return all_done
 
 
-def run_evaluations_for_config(config_file, model, injector=None):
+def run_evaluations_for_config(config_file, model):  # , injector=None ## as 3rd argument
     """Run all evaluations for a given config file by calling functions from individual files.
 
     `model` is a single QuantizedSteeringModel instance, loaded once by the
@@ -242,14 +242,14 @@ def run_evaluations_for_config(config_file, model, injector=None):
         checkpointed (the first hit the `existing_df is None` branch and
         never exercised this path)."""
         nonlocal existing_df
-        key = (row['axis'], row['vector_type'])
+        ax_vt = (row['axis'], row['vector_type'])
         if existing_df is None:
             existing_df = pd.DataFrame([row]).set_index(['axis', 'vector_type'], drop=False)
         else:
-            if key in existing_df.index:
-                merged = existing_df.loc[key].to_dict()
+            if ax_vt in existing_df.index:
+                merged = existing_df.loc[ax_vt].to_dict()
                 merged.update(row)  # aggiorna solo i campi nuovi
-                existing_df = existing_df.drop(index=key)
+                existing_df = existing_df.drop(index=ax_vt)
             else:
                 merged = dict(row)
             new_row_df = pd.DataFrame([merged]).set_index(['axis', 'vector_type'], drop=False)
@@ -294,8 +294,8 @@ def run_evaluations_for_config(config_file, model, injector=None):
             'coeff': coeff,
             'cfg_bbq_accuracy': bbq_accuracy,  # write onto results file
             'cfg_mmlu_accuracy': mmlu_accuracy,  # write onto results file
-            # 'fairness_prompt': USE_FAIRNESS_PROMPT,
-            # 'self_debias': USE_SELF_DEBIAS,
+            'fairness_prompt': USE_FAIRNESS_PROMPT,
+            'self_debias': USE_SELF_DEBIAS,
             # **(injector.describe() if injector is not None
             #    else {'injection_mode': 'none', 'k_sentences': 0}),
         }
@@ -417,13 +417,11 @@ def main():
     #         raise RuntimeError("run_bbq_evaluation must accept an 'injector' argument "
     #                            "(see 6_bbq_evaluation.py).")
 
-
-
     for config_file in config_files:
         print(f"\n{'=' * 60}")
         print(f"Config file: {config_file}")
         print('=' * 60)
-        run_evaluations_for_config(config_file, model) # config_file, model, injector
+        run_evaluations_for_config(config_file, model)  # config_file, model, injector
 
     print("\nAll evaluations complete!")
 
