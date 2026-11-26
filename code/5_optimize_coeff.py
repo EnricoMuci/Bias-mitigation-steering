@@ -72,7 +72,6 @@ else:
     STEP_COEF = default_STEP_COEF
 
 NUM_COEFF = int(round((MAX_COEFF - MIN_COEFF) / STEP_COEF)) + 1
-print(f'Coefficient interval: {[MIN_COEFF, MAX_COEFF, STEP_COEF]} → {NUM_COEFF} coefficients to process')
 
 inject_path = CROWS_PATH
 
@@ -206,6 +205,7 @@ def preview_status():  # NEW
     """Print a preview of the current status"""
     print("\n" + "=" * 55)
     print(f"PRE-RUN STATUS CHECK [K = {k}] - [B = {b}]")
+    print(f'Coefficient interval: {[MIN_COEFF, MAX_COEFF, STEP_COEF]} → {NUM_COEFF} coefficients per axis to process')
     print(f"\nWorking in {COEFF_SCORES_DIR}")
     if k > 0 and EXPERIMENT in ['reproduction', 'original']:
         print(f"[ERROR] Experiment set to '{EXPERIMENT} with k = {k} > 0!")
