@@ -34,7 +34,9 @@ parser.add_argument('-p', '--path', type=str, default=None, help='model path')
 parser.add_argument('-q', '--quantization', action='store_true', help='Insert flag to quantize the model')
 parser.add_argument('-e', '--experiment', type=str, default=None, help='Use it to change the experiment')
 
-parser.add_argument('-c', '--colab', action='store_true', help='Flag about remote saving')
+parser.add_argument('--colab', action='store_true', help='Flag about remote saving')
+
+parser.add_argument('-c', '--coeff', nargs='*', type=float, default=None, help='Coefficient interval [min, max, step]')
 parser.add_argument('-o', '--only-preview', action='store_true', help='Show only the preview')
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='Axes to be processed')
 
@@ -45,10 +47,32 @@ args = parser.parse_args()
 QUANTIZATION = args.quantization
 
 # Coefficient arguments
-MIN_COEFF = -2.0
-MAX_COEFF = 2.0
-STEP_COEF = 0.2  # use only 1.f format
+default_MIN_COEFF = -2.0
+default_MAX_COEFF = 2.0
+default_STEP_COEF = 0.2  # use only 1.f format
+if not args.coeff:
+    MIN_COEFF = default_MIN_COEFF
+    MAX_COEFF = default_MAX_COEFF
+    STEP_COEF = default_STEP_COEF
+elif len(args.coeff) == 1:
+    MIN_COEFF = args.coeff[0]
+    MAX_COEFF = default_MAX_COEFF
+    STEP_COEF = default_STEP_COEF
+elif len(args.coeff) == 2:
+    MIN_COEFF = args.coeff[0]
+    MAX_COEFF = args.coeff[1]
+    STEP_COEF = default_STEP_COEF
+elif len(args.coeff) == 3:
+    MIN_COEFF = args.coeff[0]
+    MAX_COEFF = args.coeff[1]
+    STEP_COEF = args.coeff[2]
+else:
+    MIN_COEFF = default_MIN_COEFF
+    MAX_COEFF = default_MAX_COEFF
+    STEP_COEF = default_STEP_COEF
+
 NUM_COEFF = int(round((MAX_COEFF - MIN_COEFF) / STEP_COEF)) + 1
+print(f'Coefficient interval: {[MIN_COEFF, MAX_COEFF, STEP_COEF]} → {NUM_COEFF} coefficients to process')
 
 inject_path = CROWS_PATH
 
