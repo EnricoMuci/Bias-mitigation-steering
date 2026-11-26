@@ -13,7 +13,7 @@ import utils
 import os
 
 SEED = 42
-STRICT_QUANTIZATION = os.environ.get("STRICT_QUANTIZATION", "0") == "1"
+STRICT_QUANTIZATION = os.environ.get("STRICT_QUANTIZATION", "1") == "1"
 REMOTE_DRIVE_THESIS_PROJECT = '/content/drive/MyDrive/ThesisProject'
 BASE_EXPERIMENT = 'reproduction'  # 'original 'reproduction' 'inject-crows'
 VECTOR_TYPES = ['train', 'train+prompt']
@@ -21,15 +21,15 @@ VECTOR_TYPES = ['train', 'train+prompt']
 CROWS_PATH = '../raw_data/crows/crows_pairs.csv'
 
 CROWS_AXIS_MAP = {
-        'age': 'age',
-        'appearance': 'physical-appearance',
-        'disability': 'disability',
-        'gender': 'gender',
-        'nationality': 'nationality',
-        'race': 'race-color',
-        'religion': 'religion',
-        'socioeconomic': 'socioeconomic'
-    }
+    'age': 'age',
+    'appearance': 'physical-appearance',
+    'disability': 'disability',
+    'gender': 'gender',
+    'nationality': 'nationality',
+    'race': 'race-color',
+    'religion': 'religion',
+    'socioeconomic': 'socioeconomic'
+}
 
 
 def get_args(args_list: list):
@@ -45,7 +45,7 @@ def choose_axes(axes: list | None = None) -> list:
         return utils.bbq_axes
 
 
-def get_model_short_name(model_name, quantized:bool=True):
+def get_model_short_name(model_name, quantized: bool = False):
     model_short_names = {
         "Qwen/Qwen2.5-7B-Instruct": "qwen",
         "meta-llama/Llama-3.1-8B-Instruct": "llama",
@@ -59,6 +59,14 @@ def get_model_short_name(model_name, quantized:bool=True):
     else:
         return f"{base_name}-full"
 
+def set_seed(seed: int = SEED):
+    import random
+    import numpy as np
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
 
 class CustomSteeringModel(SteeringModel):
     def __init__(
@@ -68,7 +76,7 @@ class CustomSteeringModel(SteeringModel):
             model_path: str | None = None,
             token: str | None = None,
             quantization_config: BitsAndBytesConfig | None = None,
-            torch_dtype: torch.dtype = 'auto' #torch.float16,
+            torch_dtype: torch.dtype = 'auto'  #torch.float16,
     ):
         # Directly call nn.Module.__init__() to bypass SteeringModel default loader
         torch.nn.Module.__init__(self)
@@ -122,6 +130,8 @@ class CustomSteeringModel(SteeringModel):
             else:
                 warnings.warn("Attempting to rewrap an already wrapped layer! Call .unwrap first.")
 
+        # self._active_steering_layer_id = self.layer_ids[0] if self.layer_ids else None
+
 
 def check_model_quantization(model):
     # Check 1: Does it have a quantization config attached?
@@ -149,8 +159,8 @@ def configure_model(
         model_name: str,
         model_path: str,
         layer_ids: list[int] | None = None,
-        quantized: bool = True
-    ) -> CustomSteeringModel:
+        quantized: bool = False
+) -> CustomSteeringModel:
     if layer_ids is None:
         layer_ids = [5]
 
@@ -208,10 +218,14 @@ def set_steering_layer(model, layer_id):
 
     model.layer_ids = [layer_id]
     model._active_steering_layer_id = layer_id
+
+    if hasattr(model, "reset"):  # reset of previous layer control
+        model.reset()
+
     return model
 
 
-def define_custom_tokenizer(model_name: str, model_path: str | None = None, token = None) -> AutoTokenizer:
+def define_custom_tokenizer(model_name: str, model_path: str | None = None, token=None) -> AutoTokenizer:
     """
     Define a customized tokenizer
     """

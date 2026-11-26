@@ -10,7 +10,7 @@ import torch
 from dialz import SteeringVector
 
 from utils_new import (get_args, get_model_short_name, define_custom_tokenizer, configure_model, set_steering_layer,
-                       BASE_EXPERIMENT, CROWS_PATH)
+                       BASE_EXPERIMENT, CROWS_PATH, set_seed)
 
 # Import functions from the individual evaluation files
 # Note: Using importlib because Python module names can't start with numbers
@@ -50,8 +50,8 @@ DATASETS_REGISTRY = {
     'crows': {
         'module_name': '9_crows_pairs_evaluation',
         'func_attr': 'run_crows_pairs_evaluation',
-        'relevant_axes': ['gender', 'race', 'religion', 'age', 'nationality', 'socioeconomic', 'appearance',
-                          'disability'],
+        'relevant_axes': ['gender', 'race', 'religion', 'age', 'nationality',
+                          'socioeconomic', 'appearance', 'disability'],
         'prefix': 'crows',
         'display_name': 'CrowS-Pairs',
     },
@@ -97,13 +97,14 @@ parser.add_argument('-e', '--experiment', type=str, default=None, help='Use it t
 parser.add_argument('-o', '--only-preview', action='store_true', help='Show only the preview without computing')
 
 parser.add_argument('-a', '--axes', nargs='*', type=str, default=None, help='axes to be processed')
-parser.add_argument('-t', '--vector-types', nargs='*', type=str, default=None, choices=['train', 'train+prompt'], help='train[+prompt]')
+parser.add_argument('-t', '--vector-types', nargs='*', type=str, default=None, choices=['train', 'train+prompt'],
+                    help='train[+prompt]')
 
 parser.add_argument('-k', '--k-sentences', type=int, default=0, help='Number of retrieved sentences')
 parser.add_argument('-b', '--bias-ratio', type=float, default=0.5, help='Pro-stereotype sentences ratio (0.0 - 1.0)')
 
 parser.add_argument('-d', '--datasets', nargs='*', choices=list(DATASETS_REGISTRY.keys()),
-                    default= ['bbq', 'mmlu'],  #list(EVAL_REGISTRY.keys()),
+                    default=['bbq', 'mmlu'],  #list(EVAL_REGISTRY.keys()),
                     help='Which datasets to run (default: BBQ and MMLU). E.g. --evals bbq mmlu')
 
 parser.add_argument('-c', '--config', type=str, default=None,
@@ -116,6 +117,9 @@ parser.add_argument('-r', '--retriever-spec', type=str, default=None,
 
 args = parser.parse_args()
 
+SEED = 42
+set_seed(SEED)
+
 (model_name, model_path) = get_args([args.name, args.path])
 model_short_name = get_model_short_name(model_name, quantized=args.quantization)
 tokenizer = define_custom_tokenizer(model_name, model_path)
@@ -125,17 +129,12 @@ if args.experiment is not None:
 else:
     EXPERIMENT = BASE_EXPERIMENT
 
-# Injection parameters
-k = args.k_sentences  # top-k sentences
-b = args.bias_ratio  # fraction of pro-stereotyped sentences (random mode only)
-INJECTION_MODE = args.injection_mode if k > 0 else 'none'
-
 CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}"
 RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}"
-if INJECTION_MODE == 'random':
-    RESULTS_PATH = f"{RESULTS_PATH}/k-{k}_b-{b}"
-elif INJECTION_MODE == 'retriever':
-    RESULTS_PATH = f"{RESULTS_PATH}/k-{k}_retriever"
+
+# Injection parameters
+k = args.k_sentences  # top-k sentences
+b = args.bias_ratio  # fraction of pro-stereotyped sentences
 
 if EXPERIMENT == 'reproduction':  # only reproduction
     CONFIG_PATH = f"../data/configs/{model_short_name}/{EXPERIMENT}"
@@ -145,18 +144,21 @@ else:  # add the k_b directory
     RESULTS_PATH = f"../results/{model_short_name}/{EXPERIMENT}/k-{k}_b-{b}"
 
 
-def _eval_already_done(existing_df, axis, vector_type, eval_key):
+def eval_already_done(existing_df, axis, vector_type, eval_key):
     """Check whether a specific evaluation already has a saved result for
     this axis (used to resume after an interruption without recomputing
     evaluations that already succeeded)."""
     if existing_df is None or (axis, vector_type) not in existing_df.index:
         return False
     row = existing_df.loc[(axis, vector_type)]
+    if isinstance(row, pd.DataFrame):  # righe duplicate: prendi l'ultima
+        row = row.iloc[-1]
     prefix = DATASETS_REGISTRY[eval_key]['prefix']
-    matching_cols = [c for c in existing_df.columns if c.startswith(f"{prefix}_")]
-    if not matching_cols:
-        return False
-    return any(pd.notna(row.get(c)) for c in matching_cols)
+    if pd.notna(row.get(f"{prefix}_skipped")):  # asse non rilevante: conta come fatta
+        return True
+    result_cols = [c for c in existing_df.columns
+                   if c.startswith(f"{prefix}_") and not c.endswith(('_error', '_skipped'))]
+    return any(pd.notna(row.get(c)) for c in result_cols)
 
 
 def preview_status(config_df, existing_df, requested_datasets):
@@ -175,7 +177,7 @@ def preview_status(config_df, existing_df, requested_datasets):
         done_count = 0
         for eval_key in requested_datasets:
             # Uses the updated _eval_already_done with composite keys (axis, vector_type)
-            if _eval_already_done(existing_df, axis, vector_type, eval_key):
+            if eval_already_done(existing_df, axis, vector_type, eval_key):
                 done_count += 1
 
         if done_count == total_evals:
@@ -199,18 +201,18 @@ def run_evaluations_for_config(config_file, model, injector=None):
     is swapped between axes (see set_steering_layer), not the whole model.
     """
     config_name = os.path.basename(config_file).replace('.csv', '')
-    print(f"\nRunning evaluations for config: {config_name}") # [baseline, train, train+prompt]
+    print(f"\nRunning evaluations for config: {config_name}")  # [baseline, train, train+prompt]
 
     # Load config
     config_df = pd.read_csv(config_file)
     print(f"Loaded {len(config_df)} configurations")
 
-    os.makedirs(RESULTS_PATH , exist_ok=True)
+    os.makedirs(RESULTS_PATH, exist_ok=True)
     results_file = f"{RESULTS_PATH}/{config_name}.csv"
 
     existing_df = None
     if os.path.exists(results_file):
-        existing_df = pd.read_csv(results_file).set_index(['axis','vector_type'], drop=False)
+        existing_df = pd.read_csv(results_file).set_index(['axis', 'vector_type'], drop=False)
         print(f"Found existing results file ({len(existing_df)} rows) — resuming, "
               f"already-completed evaluations will be skipped.")
 
@@ -240,14 +242,17 @@ def run_evaluations_for_config(config_file, model, injector=None):
         checkpointed (the first hit the `existing_df is None` branch and
         never exercised this path)."""
         nonlocal existing_df
-        axis_value = row['axis']
+        key = (row['axis'], row['vector_type'])
         if existing_df is None:
-            existing_df = pd.DataFrame([row]).set_index(['axis','vector_type'], drop=False)
-        elif axis_value in existing_df.index:
-            for key, value in row.items():
-                existing_df.loc[axis_value, key] = value
+            existing_df = pd.DataFrame([row]).set_index(['axis', 'vector_type'], drop=False)
         else:
-            new_row_df = pd.DataFrame([row]).set_index(['axis','vector_type'], drop=False)
+            if key in existing_df.index:
+                merged = existing_df.loc[key].to_dict()
+                merged.update(row)  # aggiorna solo i campi nuovi
+                existing_df = existing_df.drop(index=key)
+            else:
+                merged = dict(row)
+            new_row_df = pd.DataFrame([merged]).set_index(['axis', 'vector_type'], drop=False)
             existing_df = pd.concat([existing_df, new_row_df])
         existing_df.reset_index(drop=True).to_csv(results_file, index=False)
 
@@ -257,10 +262,10 @@ def run_evaluations_for_config(config_file, model, injector=None):
 
         layer = int(config_row['layer'])
         coeff = config_row['coeff']
-        bbq_accuracy = config_row['bbq_accuracy']
-        mmlu_accuracy = config_row['mmlu_accuracy']
+        bbq_accuracy = config_row['bbq_accuracy']  # read from config_file
+        mmlu_accuracy = config_row['mmlu_accuracy']  # read from config_file
 
-        pending_evals = [e for e in requested_datasets if not _eval_already_done(existing_df, axis, vector_type, e)]
+        pending_evals = [e for e in requested_datasets if not eval_already_done(existing_df, axis, vector_type, e)]
         if not pending_evals:
             print(f"\n  Skipping {axis}: all requested evaluations already completed (resumed).")
             continue
@@ -270,8 +275,9 @@ def run_evaluations_for_config(config_file, model, injector=None):
         # Check if vector file exists before proceeding
         vector_path = f'../vectors/{model_short_name}/{vector_type}/{axis}.gguf'
         if not os.path.exists(vector_path):
-            print(f"    Skipping {axis}: Vector file not found at {vector_path}")
-            continue
+            # print(f"    Skipping {axis}: Vector file not found at {vector_path}")
+            # continue
+            raise FileNotFoundError(f"Vector file not found: {vector_path}")
 
         # Reuse the already-loaded model: just swap which layer is wrapped
         # in SteeringModule, instead of reloading the whole 7B model.
@@ -280,16 +286,18 @@ def run_evaluations_for_config(config_file, model, injector=None):
 
         # Initialize result row with config data
         result_row = {
+            'k-num-sentences': k,
+            'bias-ratio': b,
             'axis': axis,
             'vector_type': vector_type,
             'layer': layer,
             'coeff': coeff,
-            'bbq_accuracy': bbq_accuracy,
-            'mmlu_accuracy': mmlu_accuracy,
-            'fairness_prompt': USE_FAIRNESS_PROMPT,
-            'self_debias': USE_SELF_DEBIAS,
-            **(injector.describe() if injector is not None
-               else {'injection_mode': 'none', 'k_sentences': 0}),
+            'cfg_bbq_accuracy': bbq_accuracy,  # write onto results file
+            'cfg_mmlu_accuracy': mmlu_accuracy,  # write onto results file
+            # 'fairness_prompt': USE_FAIRNESS_PROMPT,
+            # 'self_debias': USE_SELF_DEBIAS,
+            # **(injector.describe() if injector is not None
+            #    else {'injection_mode': 'none', 'k_sentences': 0}),
         }
 
         # Run every pending evaluation (already-completed ones were filtered out above)
@@ -394,26 +402,28 @@ def main():
     # call to set_steering_layer() inside run_evaluations_for_config wraps
     # whichever layer the first axis needs.
     print("Loading base quantized model (once for the whole run)...")
-    model = configure_model(model_name, model_path, layer_ids=[])
+    model = configure_model(model_name, model_path, layer_ids=[], quantized=args.quantization)
 
-    # Injector configuration
-    retriever = load_retriever(args.retriever_spec) if INJECTION_MODE == 'retriever' else None
-    injector = build_injector(INJECTION_MODE, k, b, CROWS_PATH, retriever)
-    if injector is not None:
-        injector.cache_dir = f"../cache/{EXPERIMENT}"
-    print(f"Injection: {injector.describe() if injector is not None else 'none'}")
+    # # Injector configuration
+    # retriever = load_retriever(args.retriever_spec) if INJECTION_MODE == 'retriever' else None
+    # injector = build_injector(INJECTION_MODE, k, b, CROWS_PATH, retriever)
+    # if injector is not None:
+    #     injector.cache_dir = f"../cache/{EXPERIMENT}"
+    # print(f"Injection: {injector.describe() if injector is not None else 'none'}")
+    #
+    # if injector is not None and 'bbq' in args.datasets:
+    #     bbq_func = getattr(get_eval_module('bbq'), DATASETS_REGISTRY['bbq']['func_attr'])
+    #     if 'injector' not in inspect.signature(bbq_func).parameters:
+    #         raise RuntimeError("run_bbq_evaluation must accept an 'injector' argument "
+    #                            "(see 6_bbq_evaluation.py).")
 
-    if injector is not None and 'bbq' in args.datasets:
-        bbq_func = getattr(get_eval_module('bbq'), DATASETS_REGISTRY['bbq']['func_attr'])
-        if 'injector' not in inspect.signature(bbq_func).parameters:
-            raise RuntimeError("run_bbq_evaluation must accept an 'injector' argument "
-                               "(see 6_bbq_evaluation.py).")
+
 
     for config_file in config_files:
         print(f"\n{'=' * 60}")
         print(f"Config file: {config_file}")
         print('=' * 60)
-        run_evaluations_for_config(config_file, model, injector)
+        run_evaluations_for_config(config_file, model) # config_file, model, injector
 
     print("\nAll evaluations complete!")
 
