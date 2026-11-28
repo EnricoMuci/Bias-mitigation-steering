@@ -73,7 +73,7 @@ def get_eval_module(eval_key):
 
 # Global configuration
 USE_FAIRNESS_PROMPT = False  # Set to True to enable fairness prompting
-USE_SELF_DEBIAS = True  # Set to True to enable self-debiasing
+USE_SELF_DEBIAS = False  # Set to True to enable self-debiasing
 
 # ARGUMENTS
 parser = argparse.ArgumentParser()
@@ -126,7 +126,11 @@ def _eval_already_done(existing_df, axis, vector_type, eval_key):
         return False
     row = existing_df.loc[(axis, vector_type)]
     prefix = DATASETS_REGISTRY[eval_key]['prefix']
-    matching_cols = [c for c in existing_df.columns if c.startswith(f"{prefix}_")]
+    # Columns copied from the config must not count as evaluation results
+    ignored_cols = {'bbq_accuracy', 'mmlu_accuracy'}
+    matching_cols = [c for c in existing_df.columns
+                     if c.startswith(f"{prefix}_") and c not in ignored_cols
+                     and not c.endswith(('_error', '_skipped'))]
     if not matching_cols:
         return False
     return any(pd.notna(row.get(c)) for c in matching_cols)
@@ -365,7 +369,7 @@ def main():
     # call to set_steering_layer() inside run_evaluations_for_config wraps
     # whichever layer the first axis needs.
     print("Loading base quantized model (once for the whole run)...")
-    model = configure_model(model_name, model_path, layer_ids=[])
+    model = configure_model(model_name, model_path, layer_ids=[], quantized=args.quantization)
 
     for config_file in config_files:
         print(f"\n{'=' * 60}")
